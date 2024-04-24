@@ -68,3 +68,4 @@ def predict(data_path, background_data_path, output):
 if __name__ == "__main__":
     args = parser.parse_args()
     predict(args.data_path, args.background_data_path, args.output)
+

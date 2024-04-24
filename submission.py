@@ -20,8 +20,53 @@ import pandas as pd
 from sklearn.linear_model import LogisticRegression
 import joblib
 
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import FunctionTransformer
+from sklearn.base import BaseEstimator, TransformerMixin
 
+class AgeTransformer(BaseEstimator, TransformerMixin):
+    def __init__(self, base_year=2024):
+        self.base_year = base_year
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X = X.copy()
+        X['age'] = self.base_year - X['birthyear_bg']
+        return X[['age']].copy()
+
+def create_pipeline():
+    pipeline = Pipeline([
+        ('age_transform', AgeTransformer()),  # Compute age from birth year
+        ('imputer', SimpleImputer(strategy='mean'))  # Impute missing values with mean
+    ])
+
+    return pipeline
+
+# Function to clean the dataframe
 def clean_df(df, background_df=None):
+    keepcols = ['nomem_encr', 'birthyear_bg', 'gender_bg']  # ID and birth year for pipeline
+
+    # Selecting only the required columns
+    df = df[keepcols]
+
+    # Creating pipeline
+    pipeline = create_pipeline()
+
+    # Applying pipeline
+    ages = pipeline.fit_transform(df[['birthyear_bg']])
+
+    df = df.drop(columns=['birthyear_bg']) 
+    df['age'] = ages
+
+    
+    return df
+
+
+def clean_df_old(df, background_df=None):
     """
     Preprocess the input dataframe to feed the model.
     # If no cleaning is done (e.g. if all the cleaning is done in a pipeline) leave only the "return df" command
@@ -45,11 +90,11 @@ def clean_df(df, background_df=None):
     keepcols = [
         "nomem_encr",  # ID variable required for predictions,
         "age"          # newly created variable
-    ] 
+    ]
 
     # Keeping data with variables selected
     df = df[keepcols]
-
+ 
     return df
 
 
