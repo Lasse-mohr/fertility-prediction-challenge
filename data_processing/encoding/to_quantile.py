@@ -1,0 +1,204 @@
+import pandas as pd
+import numpy as np
+import re
+from sklearn.base import BaseEstimator, TransformerMixin
+from dateutil.parser import parse, ParserError
+import datetime
+import warnings
+
+class ToQuantileTransformer(BaseEstimator, TransformerMixin):
+
+    """
+    Transformer for converting specified DataFrame columns into quantiles.
+
+    This transformer handles numeric and datetime columns, transforming them based
+    on their own distribution into a specified number of quantiles. Columns with a
+    single unique value are transformed to quantile 0. The class can identify and
+    ignore columns that are neither numeric nor datetime.
+
+    NaN values are encoded as -1. 
+
+    Parameters:
+    -----------
+    columns : list of str
+        List of column names in the DataFrame to be transformed.
+    n_bins : int, default=100
+        Number of quantiles to use for transforming the data.
+
+    Attributes:
+    -----------
+    cols : list of str
+        Stores the column names to be transformed.
+    n_bins : int
+        Stores the number of bins for quantization.
+    quantile_bins : dict
+        Dictionary to hold the quantile boundaries for each column.
+    dtypes : dict
+        Dictionary to store the detected data type of each column ('datetime' or 'numeric').
+    bad_cols : set
+        Set of column names that cannot be classified as either numeric or datetime.
+
+    Methods:
+    --------
+    fit(X, y=None):
+        Fits the transformer to the data, identifying column types and calculating quantiles.
+    transform(X):
+        Transforms the DataFrame's specified columns into quantiles.
+
+    """
+
+    def __init__(self, columns, n_bins = 100):
+        # List of column names to be transformed
+        self.cols = list(columns)
+        self.n_bins = n_bins
+
+        # the following dictionaries and sets are populated during training.
+        self.quantile_bins = {} # the bins that define quantile boundaries
+        self.dtypes = {} # To store infered dtypes of columns (either 'datetime' or 'numeric')
+        self.bad_cols = set() # Keeps track of columns that were neither datetime nor numeric.
+
+    def is_datetime(self, ser: pd.Series):
+        """
+        Check if the Series is of datetime type.
+
+        Parameters:
+        -----------
+        ser : pd.Series
+            Pandas Series to check for datetime type.
+
+        Returns:
+        --------
+        bool: True if series is datetime, otherwise False.
+        """
+        is_datetime = False
+        try:
+            with warnings.catch_warnings():
+                ser.apply(parse)
+            is_datetime = True
+        except (ValueError, ParserError, TypeError):
+            pass
+        return is_datetime
+
+    def is_numeric(self, ser: pd.Series):
+        """
+        Check if the Series is numeric.
+
+        Parameters:
+        -----------
+        ser : pd.Series
+            Pandas Series to check for numeric type.
+
+        Returns:
+        --------
+        bool
+            True if series is numeric, otherwise False.
+        """
+        is_numeric = False
+        try:
+            with warnings.catch_warnings():
+                ser.astype('float')
+            is_numeric = True
+        except (ValueError, TypeError):
+            pass
+        return is_numeric
+
+    def check_dtypes(self, X: pd.DataFrame):
+        """
+        Determine and store the data types of the specified columns in the DataFrame.
+
+        Parameters:
+        -----------
+        X : pd.DataFrame
+            DataFrame containing the columns to check.
+        """
+        self.check_dtypes = {}
+
+        for col in self.cols:
+            ser = X[col]
+            ser = ser.dropna()
+
+            if self.is_datetime(ser):
+                self.dtypes[col] = 'datetime'
+            elif self.is_numeric(ser):
+                self.dtypes[col] = 'numeric'
+            else:
+                self.bad_cols.add(col) #the column will be dropped from the dataframe
+
+    def fit(self, X, y=None):
+        """
+        Fit the transformer to the data by determining data types and calculating quantiles.
+        Does not return anything.
+
+        Parameters:
+        -----------
+        X : pd.DataFrame
+            DataFrame containing the data to fit.
+        y : Ignored
+            This parameter is not used but is included for compatibility with scikit-learn.
+
+        """
+        self.check_dtypes(X) #assigns col dtype to self.dtypes
+
+        for col, dtype in self.dtypes.items():
+            series = X[col]
+            series = series[series.notna()]
+
+            if series.shape[0] > 0:
+                if dtype == 'datetime': # convert to numpy compatible date format
+                    series = series.apply(parse)
+
+                elif dtype == 'numeric': # if dtype is numeric no conversion is needed
+                    pass
+
+                self.quantile_bins[col] = np.quantile(
+                                        series,
+                                        np.linspace(0, 1, num=self.n_bins + 1)
+                                        )
+
+
+    def transform(self, X):
+        """
+        Transform the DataFrame's columns into quantiles based on the fitted data.
+
+        Parameters:
+        -----------
+        X : pd.DataFrame
+            DataFrame to transform.
+
+        Returns:
+        --------
+        X_transformed : pd.DataFrame
+            DataFrame with specified columns transformed to their quantile indices.
+        """
+        # subselect columns to transform
+        X_transformed = X.drop(columns = list(self.bad_cols)).copy() # exclude columns where dtype could not be inferred
+
+        X_cols = set(X_transformed.columns)
+
+        # Apply the quantile bins to transform to quantile indices
+        for col, quantile_map in self.quantile_bins.items():
+            if col in X_cols:
+                series = X_transformed[col]
+                not_na_mask = ~series.isna()
+                series = series[not_na_mask]
+
+                dtype = self.dtypes[col]
+
+                # check if all current data is na
+                if series.shape[0] > 0:
+                    if dtype == 'datetime':
+                        series = series.apply(parse)
+
+                    quantile_values = np.searchsorted(
+                                                    quantile_map,
+                                                    series,
+                                                    side = 'left') / (self.n_bins)
+
+                    X_transformed[col] = -1 * np.ones(X_transformed.shape[0])# np.nan
+                    X_transformed.loc[not_na_mask, col] = quantile_values
+
+                else:
+                    X_transformed[col] = -1 * np.ones(X_transformed.shape[0])# pd.Series([np.nan]*X_transformed.shape[0], dtype = 'float') 
+
+        return X_transformed
+
