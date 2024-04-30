@@ -1,7 +1,7 @@
 """
 This is an example script to generate the outcome variable given the input dataset.
 
-This script should be modified to prepare your own submission that predicts 
+This script should be modified to prepare your own submission that predicts
 the outcome for the benchmark challenge by changing the clean_df and predict_outcomes function.
 
 The predict_outcomes function takes a Pandas data frame. The return value must
@@ -26,6 +26,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.base import BaseEstimator, TransformerMixin
 
+
 class AgeTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, base_year=2024):
         self.base_year = base_year
@@ -38,7 +39,7 @@ class AgeTransformer(BaseEstimator, TransformerMixin):
         X['age'] = self.base_year - X['birthyear_bg']
         return X[['age']].copy()
 
-def create_pipeline():
+def encoding_pipeline():
     pipeline = Pipeline([
         ('age_transform', AgeTransformer()),  # Compute age from birth year
         ('imputer', SimpleImputer(strategy='mean'))  # Impute missing values with mean
@@ -48,21 +49,28 @@ def create_pipeline():
 
 # Function to clean the dataframe
 def clean_df(df, background_df=None):
+    """
+    arguments:
+        df (pd.DataFrame): the questionair feature dataframe
+        background_df (df.DataFrame): the auxilliary background data
+        static_columns (list): names of columns that should not be altered
+                                by the encoding.
+    """
+
     keepcols = ['nomem_encr', 'birthyear_bg', 'gender_bg']  # ID and birth year for pipeline
 
     # Selecting only the required columns
     df = df[keepcols]
 
     # Creating pipeline
-    pipeline = create_pipeline()
+    pipeline = encoding_pipeline()
 
     # Applying pipeline
     ages = pipeline.fit_transform(df[['birthyear_bg']])
 
-    df = df.drop(columns=['birthyear_bg']) 
+    df = df.drop(columns=['birthyear_bg'])
     df['age'] = ages
 
-    
     return df
 
 
@@ -94,7 +102,7 @@ def clean_df_old(df, background_df=None):
 
     # Keeping data with variables selected
     df = df[keepcols]
- 
+
     return df
 
 

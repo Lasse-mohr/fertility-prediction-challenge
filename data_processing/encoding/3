@@ -171,8 +171,8 @@ class ToQuantileTransformer(BaseEstimator, TransformerMixin):
             DataFrame with specified columns transformed to their quantile indices.
         """
         # subselect columns to transform
-        X_transformed = X.drop(columns = list(self.bad_cols)).copy() # exclude columns where dtype could not be inferred
-
+        X_transformed = X.drop(columns=list(self.bad_cols)).copy()
+        # exclude columns where dtype could not be inferred
         X_cols = set(X_transformed.columns)
 
         # Apply the quantile bins to transform to quantile indices
@@ -190,15 +190,16 @@ class ToQuantileTransformer(BaseEstimator, TransformerMixin):
                         series = series.apply(parse)
 
                     quantile_values = np.searchsorted(
-                                                    quantile_map,
-                                                    series,
-                                                    side = 'left') / (self.n_bins)
+                                            quantile_map,
+                                            series,
+                                            side='left') / (self.n_bins)
 
-                    X_transformed[col] = -1 * np.ones(X_transformed.shape[0])# np.nan
+                    X_transformed[col] = np.nan
                     X_transformed.loc[not_na_mask, col] = quantile_values
 
                 else:
-                    X_transformed[col] = -1 * np.ones(X_transformed.shape[0])# pd.Series([np.nan]*X_transformed.shape[0], dtype = 'float') 
+                    X_transformed[col] = pd.Series(
+                        [np.nan]*X_transformed.shape[0], dtype='float'
+                    )
 
         return X_transformed
-
