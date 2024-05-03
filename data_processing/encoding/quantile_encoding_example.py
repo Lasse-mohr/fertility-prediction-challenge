@@ -1,5 +1,5 @@
 import pandas as pd
-from to_quantile import ToQuantileTransformer
+from numeric_and_date import ToQuantileTransformer
 
 
 def quantile_dates_and_numeric(
