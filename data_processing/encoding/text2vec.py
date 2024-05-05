@@ -9,13 +9,18 @@ class TextTransform(BaseEstimator):
     Class to transform multilingual sentences into vectors
     """
 
-    def __init__(self, model_name: str = "distiluse-base-multilingual-cased-v1") -> None:
+    def __init__(self, model_name: str = "distiluse-base-multilingual-cased-v1",
+                 return_tensor: bool = False) -> None:
         """
         Args:
-            model_name: specification of the 'SenteneTransformer' model (glove is the fastest and the simplest)
+            model_name: specification of the 'SenteneTransformer' model (glove is the fastest, the simplest but only for English),
+                        LaBSE is the best (but super slow), 
+                        'distil-base' is an optimal model.
         """
         assert model_name in ["distiluse-base-multilingual-cased-v1", "LaBSE",
                               "average_word_embeddings_glove.6B.300d"], "Wrong model name!"
+        assert return_tensor == False, "Not Implemented"
+
         self.model = SentenceTransformer(model_name)
 
     def _vectorize_column(self, column: pd.Series):
