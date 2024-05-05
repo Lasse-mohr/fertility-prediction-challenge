@@ -6,3 +6,5 @@
 __pycache__/
 .tool-versions
 data_processing/encoding/column_encoding_test.py
+/data
+data_processing/encoding/tcol2vec.ipynb
