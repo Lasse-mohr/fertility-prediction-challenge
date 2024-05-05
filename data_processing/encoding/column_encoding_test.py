@@ -1,4 +1,5 @@
 from encoders import SingleColumnToQuantileTransformer
+from text2vec import TextTransform
 from utils import check_dtypes
 
 import pandas as pd
@@ -18,6 +19,7 @@ df = pd.read_csv(
 encoder = {}
 columns = [col for col in df.columns
            if col not in ['nomen_encr', 'outcome_available']]
+text_encoder = TextTransform()
 
 for col in columns:
     dtype = check_dtypes(ser=df[col], codebook=codebook)
@@ -31,7 +33,7 @@ for col in columns:
         encoder[col] = trans.transform
 
     elif dtype == 'text':
-        pass  # Insert relevant function here
+        encoder[col] = text_encoder.transform
 
 # example of how to map using the encoder
 encoded_df = pd.DataFrame({col: encoder[col](df[col]) for col in encoder})
