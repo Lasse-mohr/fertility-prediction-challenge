@@ -11,8 +11,8 @@ class AggAttention(nn.Module):
         super(AggAttention, self).__init__()
         z = torch.Tensor(hidden_size)
         nn.init.uniform_(z, a=-0.1, b=0.1)  # initialize weights uniformly
+        # self.context are the learned attention weights
         self.register_parameter("context", nn.Parameter(z))
-
         self.act = nn.Softmax(dim=1)
 
     def forward(self, x):
@@ -26,6 +26,10 @@ class AggAttention(nn.Module):
 
 
 class GRUDecoder(nn.Module):
+    """
+    GRU Decoder with Additive Attention Mechanism
+    """
+
     def __init__(self,
                  input_size: int = 512,
                  hidden_size: int = 128,
