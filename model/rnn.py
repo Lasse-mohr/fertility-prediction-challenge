@@ -19,7 +19,7 @@ class AggAttention(nn.Module):
         scores = torch.einsum("bij, j -> bi", x, self.context)
         # (previous) return [BATCH_SIZE, SEQ_LEN]
         scores = self.act(scores)
-        # (previous) return [BATCH_SIZE, SEQ_LEN, 1]
+        # (previous) return [BATCH_SIZE, SEQ_LEN]
         output = torch.einsum("bij, bi -> bj", x, scores)
         # (previous) return [BATCH_SIZE, HIDDEN_SIZE]
         return output
@@ -54,7 +54,9 @@ class GRUDecoder(nn.Module):
             nn.Mish(),
             nn.LayerNorm(normalized_shape=self.post_gru_size),
             nn.AlphaDropout(p=dropout),
-            nn.Linear(self.post_gru_size, self.hidden_size)
+            nn.Linear(self.post_gru_size, self.hidden_size),
+            nn.Mish(),
+            nn.LayerNorm(normalized_shape=self.hidden_size)
         )
 
         self.attention = AggAttention(hidden_size=self.hidden_size)
