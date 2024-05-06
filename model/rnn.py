@@ -98,7 +98,7 @@ class GRUDecoder(nn.Module):
         ######
         x = self.post_gru(x)
         # (previous) returns  the shape [BATCH_SIZE, MAX_SEQ_LEN, HIDDEN_SIZE]
-        x = self.attention(x)
+        x = self.attention(x, mask=mask)
         # (previous) returns the shape [BATCH_SIZE, HIDDEN_SIZE]
         x = self.decoder(x)
         # (previous) returns the shape [BATCH_SIZE, OUTPUT_SIZE]
