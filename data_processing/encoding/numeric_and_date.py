@@ -175,7 +175,7 @@ class ToQuantileTransformer(BaseEstimator, TransformerMixin):
         # To store infered dtypes of columns (either 'datetime' or 'numeric')
         self.dtypes = {}
         # Keeps track of columns that were neither datetime nor numeric.
-        self.bad_cols = set()
+        self.bad_cols = []
 
     def is_datetime(self, ser: pd.Series):
         """
@@ -243,7 +243,7 @@ class ToQuantileTransformer(BaseEstimator, TransformerMixin):
                 self.dtypes[col] = 'numeric'
             else:
                 # the column will be dropped from the dataframe
-                self.bad_cols.add(col)
+                self.bad_cols.append(col)
 
     def fit(self, X):
         """
@@ -297,7 +297,8 @@ class ToQuantileTransformer(BaseEstimator, TransformerMixin):
             quantile indices.
         """
         # subselect columns to transform
-        X_transformed = X.drop(columns=list(self.bad_cols)).copy()
+        X_transformed = X.copy()#X.drop(columns=list(self.bad_cols)).copy()
+        X_transformed[self.bad_cols] = np.nan
         # exclude columns where dtype could not be inferred
         X_cols = set(X_transformed.columns)
 
@@ -321,7 +322,7 @@ class ToQuantileTransformer(BaseEstimator, TransformerMixin):
                                             side='left') / (self.n_bins)
 
                     X_transformed[col] = np.nan
-                    X_transformed.loc[not_na_mask, col] = quantile_values
+                    X_transformed.loc[not_na_mask, col] = quantile_values*100
 
                 else:
                     X_transformed[col] = pd.Series(
