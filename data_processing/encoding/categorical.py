@@ -14,8 +14,8 @@ class CategoricalTransformer(BaseEstimator, TransformerMixin):
         core_cat_df['labels_cat'] = core_cat_df['labels_cat'].str.split("; ").apply(lambda x: [e.strip() for e in x])
 
         # Init vars
-        vocab = {'UNK': 0}
-        vocab_max = len(vocab) # (1)
+        vocab = {'UNK': 101} # We reserve the first 101 for quantiles
+        vocab_max = 102 # (102)
         single_labels = []
 
         # Group by question_number (first two and last three characters of var_name)
