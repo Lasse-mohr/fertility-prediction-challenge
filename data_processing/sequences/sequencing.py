@@ -12,7 +12,7 @@ def to_sequences(df, summary):
             q_to_index[var_name.strip()] = sequence_index
 
     pids = df['nomem_encr'] 
-    seq = {pid: {str.zfill(str(i), 2): [0]*len(core_questions) for i in range(7, 21)} for pid in pids} # 0 is UNK
+    seq = {pid: {str.zfill(str(i), 2): [101]*len(core_questions) for i in range(7, 21)} for pid in pids}    # 101 is UNK
     for column, idx in q_to_index.items():
         year = column[2:4]
         question = df[column]
