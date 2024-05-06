@@ -1,9 +1,10 @@
 import re
 import pandas as pd
 import itertools
+from sklearn.base import BaseEstimator, TransformerMixin
 
 
-class CategoricalTransformer:
+class CategoricalTransformer(BaseEstimator, TransformerMixin):
     def fit(self, codebook):
         # Get categorical core questions
         core_cat_df = codebook[(codebook.var_name.str.startswith('c')) & (codebook.type_var == 'categorical')]
@@ -13,24 +14,25 @@ class CategoricalTransformer:
         core_cat_df['labels_cat'] = core_cat_df['labels_cat'].str.split("; ").apply(lambda x: [e.strip() for e in x])
 
         # Init vars
-        vocab_max = 1
         vocab = {'UNK': 0}
+        vocab_max = len(vocab) # (1)
         single_labels = []
 
         # Group by question_number (first two and last three characters of var_name)
         for question_key, group in core_cat_df.groupby(lambda x: self.get_question_number(core_cat_df['var_name'][x]), sort=False):
             # Get all unique value-label pairs
             pairs = self.get_unique_value_label_pairs(group)
-            pairs = sorted(pairs, key=lambda x: x[0]) # Sort by value
+            pairs = sorted(pairs, key=lambda x: x[0]) # Sort by value (needed for itertools.groupby)
 
             # Iterate over pairs
             for _, subgroup in itertools.groupby(pairs, key=lambda x: x[0]):
                 labels = [label for _, label in subgroup]
-                if len(labels) <= 1:    # We encode single labels last
-                    single_labels.append((question_key, labels))
+                # We encode single labels last
+                if len(labels) <= 1:    
+                    single_labels.append(labels[0])
                     continue
-                elif len(labels) >= 2:
-                    if self.is_same_label(question_key, labels):
+                elif len(labels) >= 2: # When labels changed for a question
+                    if self.is_same_label(question_key, labels): # Check if it's rephrasing of the same label
                         # Check for exisiting labels in vocab
                         present_labels = [label for label in labels if label in vocab]
                         # If present, use it, else create new token
@@ -48,23 +50,22 @@ class CategoricalTransformer:
                             if label not in vocab:
                                 vocab[label] = vocab_max
                                 vocab_max += 1
-        
+
         # Lastly we add single labels to vocab
         for label in single_labels:
             if label not in vocab:
                 vocab[label] = vocab_max
                 vocab_max += 1
 
-        # We then create the tokenizer
-        converter = {}
-        for _, row in core_cat_df.iterrows():
-            pairs = list(zip(row['values_cat'], row['labels_cat']))
-            converter[row['var_name']] = {value: vocab[label] for value, label in pairs}
+        # We then create the tokenizer (converter)
+        self.converter = {
+            row['var_name']: {value: vocab[label] for value, label in zip(row['values_cat'], row['labels_cat'])}
+            for _, row in core_cat_df.iterrows()
+        }
         
-        self.converter = converter
         self.vocab = vocab
 
-    def transform(self, series):
+    def transform(self, series: pd.Series):
         return series.apply(lambda x: self.tokenize(x, self.converter[series.name]))
 
     def is_same_label(self, question_key, labels):
@@ -84,6 +85,9 @@ class CategoricalTransformer:
         if pd.notna(value):
             value = str(int(value))
         return series_converter.get(value, self.vocab['UNK'])
+    
+    def max(self):
+        return max(self.vocab.values())
 
     @staticmethod
     def get_question_number(var_name):
