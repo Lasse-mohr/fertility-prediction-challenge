@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
 class AggAttention(nn.Module):
@@ -15,11 +16,19 @@ class AggAttention(nn.Module):
         self.register_parameter("context", nn.Parameter(z))
         self.act = nn.Softmax(dim=1)
 
-    def forward(self, x):
+    def forward(self, x, mask=None):
+        """
+        Args:
+            x: tensor [BATCH_SIZE, MAX_SEQ_LEN, HIDDEN_SIZE]
+            mask: binary tensor [BATCH_SIZE, MAX_SEQ_LEN] (False stands for the padded element, aka year when the questionnaire is absent)
+        """
         scores = torch.einsum("bij, j -> bi", x, self.context)
-        # (previous) return [BATCH_SIZE, SEQ_LEN]
+        # (previous) return [BATCH_SIZE, MAX_SEQ_LEN]
+        if mask is not None:
+            # mask out the absent elements
+            scores = scores.masked_fill(~mask, float("-inf"))
         scores = self.act(scores)
-        # (previous) return [BATCH_SIZE, SEQ_LEN]
+        # (previous) return [BATCH_SIZE, MAX_SEQ_LEN]
         output = torch.einsum("bij, bi -> bj", x, scores)
         # (previous) return [BATCH_SIZE, HIDDEN_SIZE]
         return output
@@ -66,15 +75,29 @@ class GRUDecoder(nn.Module):
         self.attention = AggAttention(hidden_size=self.hidden_size)
         self.decoder = nn.Linear(self.hidden_size, self.output_size)
 
-    def forward(self, x):
+    def forward(self, x, mask=None):
         """
         Args:
-            x: [BATCH_SIZE, SEQUENCE_LEN, INPUT_SIZE]
+            x: [BATCH_SIZE, MAX_SEQUENCE_LEN, INPUT_SIZE], it is important to concatenate all the existing questionnaire embedding and then pad them
+            mask: binary tensor [BATCH_SIZE, MAX_SEQ_LEN] (False stands for the padded element)
         """
-        x, _ = self.gru(x)
-        #  (previous) returns the shape [BATCH_SIZE, SEQ_LEN, HIDDEN_SIZE]
+        ######
+        # this part is specific to RNNs and padded sequences
+        lengths = mask.sum(dim=1)
+        lengths, sorted_idx = lengths.sort(0, descending=True)
+        x = x[sorted_idx]
+
+        packed_x = pack_padded_sequence(x, lengths.cpu(), batch_first=True)
+        packed_x, _ = self.gru(packed_x)
+        x, _ = pad_packed_sequence(packed_x, batch_first=True)
+
+        _, original_idx = sorted_idx.sort(0)
+        x = x[original_idx]
+        # (previous) returns the shape [BATCH_SIZE, MAX_SEQ_LEN, HIDDEN_SIZE]
+        # RNN section ends
+        ######
         x = self.post_gru(x)
-        # (previous) returns  the shape [BATCH_SIZE, SEQ_LEN, HIDDEN_SIZE]
+        # (previous) returns  the shape [BATCH_SIZE, MAX_SEQ_LEN, HIDDEN_SIZE]
         x = self.attention(x)
         # (previous) returns the shape [BATCH_SIZE, HIDDEN_SIZE]
         x = self.decoder(x)
