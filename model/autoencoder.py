@@ -1,8 +1,10 @@
 import torch
 
+
 class AutoEncoder(torch.nn.Module):
-    def __init__(self, num_embeddings) -> None:
+    def __init__(self, num_embeddings, encoding_dim=16) -> None:
         super().__init__()
+        self.encoding_dim = encoding_dim
 
         self.embed = torch.nn.Embedding(num_embeddings, 512)
 
@@ -15,11 +17,11 @@ class AutoEncoder(torch.nn.Module):
             torch.nn.ReLU(),
             torch.nn.Linear(64, 32),
             torch.nn.ReLU(),
-            torch.nn.Linear(32, 16),
+            torch.nn.Linear(32, encoding_dim),
         )
 
         self.decoder = torch.nn.Sequential(
-            torch.nn.Linear(16, 32),
+            torch.nn.Linear(encoding_dim, 32),
             torch.nn.ReLU(),
             torch.nn.Linear(32, 64),
             torch.nn.ReLU(),
@@ -43,3 +45,6 @@ class AutoEncoder(torch.nn.Module):
     def embed_and_encode(self, x):
         x = self.embed(x)
         return self.encode(x)
+
+    def get_encoding_dim(self):
+        return self.encoding_dim
