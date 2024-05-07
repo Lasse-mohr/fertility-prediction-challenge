@@ -43,6 +43,7 @@ class GRUDecoder(nn.Module):
                  input_size: int = 512,
                  hidden_size: int = 128,
                  num_layers: int = 2,
+                 max_seq_len: int = 10,
                  output_size: int = 1,
                  dropout: float = 0.2,
                  bidirectional: bool = True) -> None:
@@ -50,6 +51,7 @@ class GRUDecoder(nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
+        self.max_seq_len = max_seq_len
 
         gru_dropout = 0.0 if num_layers == 1 else dropout
         self.post_gru_size = 2 * hidden_size if bidirectional else hidden_size
@@ -89,7 +91,8 @@ class GRUDecoder(nn.Module):
 
         packed_x = pack_padded_sequence(x, lengths.cpu(), batch_first=True)
         packed_x, _ = self.gru(packed_x)
-        x, _ = pad_packed_sequence(packed_x, batch_first=True)
+        x, _ = pad_packed_sequence(
+            packed_x, batch_first=True, total_length=self.max_seq_len)
 
         _, original_idx = sorted_idx.sort(0)
         x = x[original_idx]
