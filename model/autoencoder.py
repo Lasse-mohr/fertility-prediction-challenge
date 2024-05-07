@@ -1,6 +1,5 @@
 import torch
 
-
 class AutoEncoder(torch.nn.Module):
     def __init__(self, num_embeddings) -> None:
         super().__init__()
@@ -36,7 +35,11 @@ class AutoEncoder(torch.nn.Module):
         x = self.encoder(x)
         x = self.decoder(x)
         return x
-    
+
     def get_loss(self, x):
         x_hat = self.forward(x)
         return torch.nn.functional.mse_loss(x_hat, self.embed(x))
+
+    def embed_and_encode(self, x):
+        x = self.embed(x)
+        return self.encode(x)

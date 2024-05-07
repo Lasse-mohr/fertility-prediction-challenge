@@ -9,6 +9,8 @@ def quantile_dates_and_numeric(
                     'nomem_encr',
                     'new_child',
                     'outcome_available',
+                    'nohouse_encr',
+                    'wave'
                      ]
       ):
     """
@@ -44,7 +46,7 @@ def quantile_dates_and_numeric(
 if __name__ == '__main__':
     # load the data
 
-    path_for_PreFer_folder = ''
+    path_for_PreFer_folder = '/Users/lmmi/PreFer'
 
     df = pd.read_csv(path_for_PreFer_folder +
                      '/training_data/PreFer_train_data.csv',

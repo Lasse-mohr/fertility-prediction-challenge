@@ -3,6 +3,14 @@ import pandas as pd
 
 def to_sequences(df, summary):
     core_questions = summary[summary.var_names.str.startswith('c')].reset_index()
+    core_questions = core_questions[
+        core_questions.var_type_across_waves.isin(
+            ["categorical",
+             "numeric",
+             "date or time",
+             "numeric -- AND -- categorical",
+             "categorical -- AND -- numeric"]
+        )].reset_index()
 
     q_to_index = {}
     for sequence_index, question in core_questions.iterrows():
