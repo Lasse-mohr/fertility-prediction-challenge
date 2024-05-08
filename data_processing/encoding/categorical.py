@@ -95,18 +95,22 @@ class CategoricalTransformer(BaseEstimator, TransformerMixin):
 
     @staticmethod
     def get_unique_value_label_pairs(group):
+        """ Get all unique value-label pairs for a question group"""
         pairs = group.apply(lambda row: list(zip(row['values_cat'], row['labels_cat'])), axis=1)
         pairs = set(sum(pairs.tolist(), []))
         return pairs
     
     @staticmethod
     def if_all_digits(labels): #Also counts dates
+        """ Checks whether all labels are digits, should be falsified"""
         return all([l.isdigit() for l in labels])
     @staticmethod
     def is_same(labels):
+        """ Checks whether all labels are the same"""
         return len(set(labels)) == 1
     @staticmethod
     def one_word_match(labels):
+        """ Checks whether all labels have a word in common"""
         for label in labels:
             for word in label.split():
                 if all([word in l.split() for l in labels if l != label]):
@@ -116,6 +120,7 @@ class CategoricalTransformer(BaseEstimator, TransformerMixin):
         return True
     @staticmethod
     def is_positive_edge_case(question_key, labels):
+        """ Positive edge cases manually checked and determined to be the same label"""
         edge_cases = [
             set(['man', 'male']),
             set(['woman', 'female']), 
@@ -127,6 +132,7 @@ class CategoricalTransformer(BaseEstimator, TransformerMixin):
         return set(labels) in edge_cases or question_key == ('cs', '372')
     @staticmethod
     def is_negative_edge_case(question_key, labels): # Should be Falsified (we should negative cases)
+        """ Negative edge cases manually checked and should be falsified"""
         edge_cases = [
             set(['less often', 'never']), 
             set(['has paid job', 'yes']),
@@ -140,6 +146,8 @@ class CategoricalTransformer(BaseEstimator, TransformerMixin):
 
     @staticmethod
     def is_value_equal(labels):
+        """ For the case where a digit is in the labels e.g. (1 = Very good, 1 = Super good)
+        Checks whether the values are equal"""
         if not labels[0].split()[0].isdigit():
             return False
         for label in labels:
@@ -148,6 +156,7 @@ class CategoricalTransformer(BaseEstimator, TransformerMixin):
         return True
     @staticmethod
     def is_overlapping(labels):
+        """ Checks whether the characters of the labels are overlapping"""
         for label in labels:
             if not all([(set(label).issubset(label2) or set(label2).issubset(label)) for label2 in labels if label2 != label]):
                 return False
