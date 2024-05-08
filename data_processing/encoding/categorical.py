@@ -7,7 +7,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 class CategoricalTransformer(BaseEstimator, TransformerMixin):
     def fit(self, codebook):
         # Get categorical core questions
-        core_cat_df = codebook[(codebook.year.notna()) & (codebook.type_var == 'categorical')]
+        core_cat_df = codebook[(codebook.year.notna()) & (codebook.type_var == 'categorical')].copy()
 
         # Convert strings to list
         core_cat_df['values_cat'] = core_cat_df['values_cat'].str.split("; ").apply(lambda x: [e.strip() for e in x])
@@ -65,7 +65,13 @@ class CategoricalTransformer(BaseEstimator, TransformerMixin):
         
         self.vocab = vocab
 
-    def transform(self, series: pd.Series):
+    def transform(self, df):
+        if isinstance(df, pd.Series):
+            return self.transform_series(df)
+        elif isinstance(df, pd.DataFrame):
+            return df.apply(self.transform_series)
+        
+    def transform_series(self, series: pd.Series):
         return series.apply(lambda x: self.tokenize(x, self.converter[series.name]))
 
     def is_same_label(self, question_key, labels):

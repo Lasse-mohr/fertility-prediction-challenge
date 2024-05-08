@@ -1,30 +1,31 @@
-import pandas as pd
+def to_sequences(df, codebook):
+    codebook = codebook[codebook.year.notna()]
+    codebook['year'] = codebook['year'].astype(int)
 
-
-def to_sequences(df, summary):
-    core_questions = summary[summary.var_names.str.startswith('c')].reset_index()
-    core_questions = core_questions[
-        core_questions.var_type_across_waves.isin(
-            ["categorical",
-             "numeric",
-             "date or time",
-             "numeric -- AND -- categorical",
-             "categorical -- AND -- numeric"]
-        )].reset_index()
-
-    q_to_index = {}
-    for sequence_index, question in core_questions.iterrows():
-        var_names = question.var_names.split(";")
-        which_waves = question.which_waves.split(",") if pd.notna(question.which_waves) else []
-        for var_name, year in zip(var_names, which_waves):
-            q_to_index[var_name.strip()] = sequence_index
+    # Get all question pairs
+    pairs = codebook['var_name'].apply(get_pairs)
+    var_name_index = {}
+    for i, (_, x) in enumerate(codebook.groupby(pairs, sort=False)):
+        for _, row in x.iterrows():
+            var_name_index[row['var_name']] = (row.year, i)
 
     pids = df['nomem_encr'] 
-    seq = {pid: {str.zfill(str(i), 2): [101]*len(core_questions) for i in range(7, 21)} for pid in pids}    # 101 is UNK
-    for column, idx in q_to_index.items():
-        year = column[2:4]
-        question = df[column]
-        for pid, val in zip(pids, question):
+    # Create dict of {pid: {year: sequences}}
+    seq = {pid: {year: [101]*(len(set(pairs))) for year in codebook['year'].unique()} for pid in pids}    # 101 is UNK
+    for column, (year, idx) in var_name_index.items():
+        if column not in df:    # If column isn't present, we skip it (defaulting to 101)
+            continue
+        for pid, val in zip(pids, df[column]):
             seq[pid][year][idx] = val
 
     return seq
+
+def get_pairs(var_name):
+    if var_name.startswith('c'):
+        if var_name.endswith('_m'):
+            return var_name[:2] + var_name[-1]
+        else:
+            return var_name[:2] + var_name[-3:]
+    else:
+        return var_name.split("_")[0]
+    
