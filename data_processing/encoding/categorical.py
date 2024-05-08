@@ -7,7 +7,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 class CategoricalTransformer(BaseEstimator, TransformerMixin):
     def fit(self, codebook):
         # Get categorical core questions
-        core_cat_df = codebook[(codebook.var_name.str.startswith('c')) & (codebook.type_var == 'categorical')]
+        core_cat_df = codebook[(codebook.year.notna()) & (codebook.type_var == 'categorical')]
 
         # Convert strings to list
         core_cat_df['values_cat'] = core_cat_df['values_cat'].str.split("; ").apply(lambda x: [e.strip() for e in x])
