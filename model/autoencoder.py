@@ -94,7 +94,7 @@ class AutoEncoder(nn.Module):
             ConvEncoderLayer(input_size=embedding_size // 8, output_size=encoding_size,
                              kernel_size=6, padding_len=1, pooling_size=4),
             nn.Mish(),
-            nn.AdaptiveAvgPool1d(1)
+            nn.AdaptiveAvgPool1d(1)  # produces flat embedding of the table
         )
 
         self.decoder = nn.Sequential(
