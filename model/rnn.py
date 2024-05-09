@@ -46,12 +46,14 @@ class GRUDecoder(nn.Module):
                  max_seq_len: int = 10,
                  output_size: int = 1,
                  dropout: float = 0.2,
-                 bidirectional: bool = True) -> None:
+                 bidirectional: bool = True,
+                 xavier_initialization: bool = True) -> None:
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.max_seq_len = max_seq_len
+        self.num_layers = num_layers
 
         gru_dropout = 0.0 if num_layers == 1 else dropout
         self.post_gru_size = 2 * hidden_size if bidirectional else hidden_size
@@ -68,7 +70,7 @@ class GRUDecoder(nn.Module):
         self.post_gru = nn.Sequential(
             nn.Mish(),
             nn.LayerNorm(normalized_shape=self.post_gru_size),
-            nn.AlphaDropout(p=dropout),
+            nn.Dropout(p=dropout),
             nn.Linear(self.post_gru_size, self.hidden_size),
             nn.Mish(),
             nn.LayerNorm(normalized_shape=self.hidden_size)
@@ -76,7 +78,18 @@ class GRUDecoder(nn.Module):
 
         self.attention = AggAttention(hidden_size=self.hidden_size)
         self.decoder = nn.Linear(self.hidden_size, self.output_size)
+
+        if xavier_initialization:
+            self.init_parameters()
+
         print("The model is going to set all input MASK to None")
+
+    def init_parameters(self):
+        """
+        Initialize the parameters with Xavier Initialization.
+        """
+        nn.init.xavier_uniform_(self.post_gru[3].weight, gain=2/3)
+        nn.init.xavier_uniform_(self.decoder.weight, gain=1.0)
 
     def forward(self, x, mask=None):
         """
@@ -91,6 +104,7 @@ class GRUDecoder(nn.Module):
         # x = x[sorted_idx]
 
         # packed_x = pack_padded_sequence(x, lengths.cpu(), batch_first=True)
+        mask = None
         x, _ = self.gru(x)
         # x, _ = pad_packed_sequence(
         #    packed_x, batch_first=True, total_length=self.max_seq_len)
