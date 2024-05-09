@@ -76,6 +76,7 @@ class GRUDecoder(nn.Module):
 
         self.attention = AggAttention(hidden_size=self.hidden_size)
         self.decoder = nn.Linear(self.hidden_size, self.output_size)
+        print("The model is going to set all input MASK to None")
 
     def forward(self, x, mask=None):
         """
@@ -85,17 +86,17 @@ class GRUDecoder(nn.Module):
         """
         ######
         # this part is specific to RNNs and padded sequences
-        lengths = mask.sum(dim=1)
-        lengths, sorted_idx = lengths.sort(0, descending=True)
-        x = x[sorted_idx]
+        # lengths = mask.sum(dim=1)
+        # lengths, sorted_idx = lengths.sort(0, descending=True)
+        # x = x[sorted_idx]
 
-        packed_x = pack_padded_sequence(x, lengths.cpu(), batch_first=True)
-        packed_x, _ = self.gru(packed_x)
-        x, _ = pad_packed_sequence(
-            packed_x, batch_first=True, total_length=self.max_seq_len)
+        # packed_x = pack_padded_sequence(x, lengths.cpu(), batch_first=True)
+        x, _ = self.gru(x)
+        # x, _ = pad_packed_sequence(
+        #    packed_x, batch_first=True, total_length=self.max_seq_len)
 
-        _, original_idx = sorted_idx.sort(0)
-        x = x[original_idx]
+        # _, original_idx = sorted_idx.sort(0)
+        # x = x[original_idx]
         # (previous) returns the shape [BATCH_SIZE, MAX_SEQ_LEN, HIDDEN_SIZE]
         # RNN section ends
         ######
