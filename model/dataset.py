@@ -24,4 +24,24 @@ class PretrainingDataset(Dataset):
         for year, sequence in self.samples:
             current_max = max(current_max, sequence.max().item())
         return current_max + 1
+    
+class FinetuningDataset(Dataset):
+    def __init__(self, sequences: dict, targets: dict):
+        """ We expect sequences to be pre-encoded and structered accordingly here"""
+        self.keys = list(sequences.keys())
+
+        targets = targets.set_index(keys='nomem_encr').squeeze().to_dict()
+        for person_id, target in targets.items():
+            targets[person_id] = torch.tensor(target)
+
+        self.sequences = sequences
+        self.targets = targets
+                
+    def __len__(self):
+        return len(self.sequences)
+
+    def __getitem__(self, idx):
+        person_id = self.keys[idx]
+
+        return self.sequences[person_id], self.targets[person_id]
 

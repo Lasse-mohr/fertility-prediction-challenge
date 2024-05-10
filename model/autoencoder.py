@@ -53,11 +53,13 @@ class AutoEncoder(nn.Module):
             s = out[-1]
         return out
 
-    def forward(self, year, seq):
+    def forward(self, year, seq, encode_only=False):
         x = self.embedding(year, seq)
         x = x.permute(0, 2, 1)  # we need to switch the things around
         # significantly reduce the dimensionality while allowing for interactions between 2D dimensions
         x = self.encoder(x)
+        if encode_only:
+            return x.view(x.size(0), -1)
 
         # Decoding
         x = self.decoder(x)
@@ -66,15 +68,6 @@ class AutoEncoder(nn.Module):
         x = x.permute(0, 2, 1)
         return x
 
-    def encode(self, x):
-        """
-        Return the embedding of a survey
-        """
-        x = self.embedding(x)
-        x = x.permute(0, 2, 1)  # we need to switch the things around
-        # significantly reduce the dimensionality while allowing for interactions between 2D dimensions
-        x = self.encoder(x).view(x.size(0), -1)
-        return x
 
 ################
 # ARCHIVE
