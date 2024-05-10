@@ -27,7 +27,7 @@ def encoding_pipeline(data, codebook):
     # Fill any nans
     data = data.fillna(101)
     data = data.astype(int, errors='ignore')
-    data = data[data.columns[data.dtypes != 'object']]
+    data = data[data.columns[data.dtypes != 'object']] # Drop object columns (automatically filled with 101 in to_sequences)
 
     # Convert to sequences
     sequences = to_sequences(data, codebook)
