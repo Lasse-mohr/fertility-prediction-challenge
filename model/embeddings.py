@@ -10,10 +10,10 @@ class SurveyEmbeddings(torch.nn.Module):
             self.question_embedding = torch.nn.Embedding(n_questions, embedding_dim) # Number of unique questions
             self.question_range = torch.arange(n_questions) # Fixed range of questions
 
-    def forward(self, answer, year):
+    def forward(self, year, answer):
         answer = self.answer_embedding(answer)
         year = self.yearly_embedding(year)
-        embeddings = answer + year
+        embeddings = answer + year.unsqueeze(1)
         if hasattr(self, 'question_embedding'):
             embeddings += self.question_embedding(self.question_range)
         return embeddings

@@ -1,14 +1,14 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from layers import ConvEncoderLayer, ConvDecoderLayer
-from embeddings import SurveyEmbeddings
+from model.layers import ConvEncoderLayer, ConvDecoderLayer
+from model.embeddings import SurveyEmbeddings
 
 
 class AutoEncoder(nn.Module):
     def __init__(self, vocab_size: int,
-                 sequence_len: int,
                  embedding_size: int,
-                 encoding_size: int) -> None:
+                 encoding_size: int,
+                 sequence_len: int = 3268) -> None:
         super().__init__()
 
         self.embedding = SurveyEmbeddings(vocab_size, sequence_len, n_years=14, embedding_dim=embedding_size)
@@ -18,7 +18,6 @@ class AutoEncoder(nn.Module):
         self.embedding_size = embedding_size
         self.encoding_size = encoding_size
 
-        # self.embedding = nn.Embedding(vocab_size, embedding_size)
         self.encoder = nn.Sequential(
             ConvEncoderLayer(input_size=embedding_size, output_size=embedding_size //
                              4, kernel_size=3, padding_len=1, pooling_size=4),
@@ -54,8 +53,8 @@ class AutoEncoder(nn.Module):
             s = out[-1]
         return out
 
-    def forward(self, x, year):
-        x = self.embedding(x, year)
+    def forward(self, year, seq):
+        x = self.embedding(year, seq)
         x = x.permute(0, 2, 1)  # we need to switch the things around
         # significantly reduce the dimensionality while allowing for interactions between 2D dimensions
         x = self.encoder(x)
