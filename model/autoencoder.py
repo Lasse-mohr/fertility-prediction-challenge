@@ -144,6 +144,46 @@ class AutoEncoder(nn.Module):
         x = self.encoder(x).view(x.size(0), -1)
         return x
 
+######
+##
+
+
+class SqueezeExcitation(nn.Module):
+    """
+    Based on the idea of between channel interactions:
+    https://arxiv.org/abs/1709.01507
+    """
+
+    def __init__(self, num_columns, hidden_size, reduction_ratio=16):
+        super(SqueezeExcitation, self).__init__()
+        # Assuming the reduction happens across the hidden_size
+        self.num_columns = num_columns
+        self.reduced_size = max(1, hidden_size // reduction_ratio)
+
+        self.squeeze = nn.AdaptiveAvgPool1d(1)  # Squeezes hidden_size to 1
+        self.excitation = nn.Sequential(
+            nn.Linear(num_columns, self.reduced_size),
+            nn.ReLU(inplace=True),
+            nn.Linear(self.reduced_size, num_columns),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        # x shape: [batch_size, num_columns, hidden_size]
+        # Squeeze operation
+        # Change to [batch_size, hidden_size, num_columns] for pooling
+        z = self.squeeze(x)
+        # z shape: [batch_size, hidden_size, 1]
+
+        # Excitation operation
+        z = z.view(z.size(0), -1)  # Flatten [batch_size, hidden_size]
+        s = self.excitation(z)  # [batch_size, num_columns]
+        # Reshape to [batch_size, num_columns, 1] to match original dimensions
+        s = s.view(s.size(0), s.size(1), 1)
+
+        return x * s  # Apply recalibration weights to the original input
+
+
 ################
 # ARCHIVE
 
