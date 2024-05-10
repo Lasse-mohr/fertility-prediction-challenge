@@ -31,7 +31,7 @@ class ReducedSelfAttention(nn.Module):
         values = self.value(x)
 
         # Apply attention weights to the values
-        output = self.attention(x, keys, values)
+        output, _ = self.attention(x, keys, values, need_weights=False)
 
         # Reduce the sequence dimension
         reduced_output = self.reduce_dim(output.transpose(
