@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from model.layers import ConvEncoderLayer, ConvDecoderLayer
+from model.layers import ConvEncoderLayer, ConvDecoderLayer, Norm
 from model.embeddings import SurveyEmbeddings
 
 
@@ -11,7 +11,8 @@ class AutoEncoder(nn.Module):
                  sequence_len: int = 3268) -> None:
         super().__init__()
 
-        self.embedding = SurveyEmbeddings(vocab_size, sequence_len, n_years=14, embedding_dim=embedding_size)
+        self.embedding = SurveyEmbeddings(
+            vocab_size, sequence_len, n_years=14, embedding_dim=embedding_size)
 
         self.vocab_size = vocab_size
         self.sequence_len = sequence_len
@@ -45,6 +46,12 @@ class AutoEncoder(nn.Module):
             nn.LazyLinear(sequence_len)
         )
 
+        self.cls = nn.Sequential(
+            # Norm(),
+            nn.Linear(embedding_size, vocab_size, bias=False)
+        )
+        self.cls[0].weight = self.embedding.answer_embedding.weight
+
     def get_encoder_shapes(self):
         s = self.sequence_len
         out = []
@@ -66,7 +73,8 @@ class AutoEncoder(nn.Module):
         # Reshape to match the expected input for ConvTranspose1d
         # Switch dimensions back to [batch_size, seq_len, embedding_size]
         x = x.permute(0, 2, 1)
-        return x
+        logits = self.cls(x)
+        return x, logits
 
 
 ################

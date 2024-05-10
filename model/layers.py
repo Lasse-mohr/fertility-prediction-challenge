@@ -1,4 +1,14 @@
 import torch.nn as nn
+import torch.nn.functional as F
+
+
+def l2_norm(x):
+    return F.normalize(x, dim=-1, p=2)
+
+
+class Norm(nn.Module):
+    def forward(self, X):
+        return l2_norm(X)
 
 
 # partly inspired by https://github.com/chrisvdweth/ml-toolkit/blob/master/pytorch/models/text/classifier/cnn.py
@@ -69,7 +79,7 @@ class ConvDecoderLayer(nn.Module):
 
         return x
 
-  
+
 class SqueezeExcitation(nn.Module):
     """
     Based on the idea of between channel interactions:
@@ -104,4 +114,3 @@ class SqueezeExcitation(nn.Module):
         s = s.view(s.size(0), s.size(1), 1)
 
         return x * s  # Apply recalibration weights to the original input
-

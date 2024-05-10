@@ -54,6 +54,7 @@ class GRUDecoder(nn.Module):
         self.output_size = output_size
         self.max_seq_len = max_seq_len
         self.num_layers = num_layers
+        self.bidirectional = bidirectional
 
         gru_dropout = 0.0 if num_layers == 1 else dropout
         self.post_gru_size = 2 * hidden_size if bidirectional else hidden_size
@@ -91,6 +92,10 @@ class GRUDecoder(nn.Module):
         nn.init.xavier_uniform_(self.post_gru[3].weight, gain=2/3)
         nn.init.xavier_uniform_(self.decoder.weight, gain=1.0)
 
+    def h0(self, batch_size):
+        dn = self.num_layers * 2 if self.bidirectional else self.num_layers
+        return torch.zeros((dn, batch_size, self.hidden_size))
+
     def forward(self, x, mask=None):
         """
         Args:
@@ -105,7 +110,8 @@ class GRUDecoder(nn.Module):
 
         # packed_x = pack_padded_sequence(x, lengths.cpu(), batch_first=True)
         mask = None
-        x, _ = self.gru(x)
+        h0 = self.h0(x.size(0)).to(x.device)
+        xx, _ = self.gru(x, h0)
         # x, _ = pad_packed_sequence(
         #    packed_x, batch_first=True, total_length=self.max_seq_len)
 
@@ -114,10 +120,10 @@ class GRUDecoder(nn.Module):
         # (previous) returns the shape [BATCH_SIZE, MAX_SEQ_LEN, HIDDEN_SIZE]
         # RNN section ends
         ######
-        x = self.post_gru(x)
+        xx = self.post_gru(xx)
         # (previous) returns  the shape [BATCH_SIZE, MAX_SEQ_LEN, HIDDEN_SIZE]
-        x = self.attention(x, mask=mask)
+        xx = self.attention(xx, mask=mask)
         # (previous) returns the shape [BATCH_SIZE, HIDDEN_SIZE]
-        x = self.decoder(x)
+        xx = self.decoder(xx)
         # (previous) returns the shape [BATCH_SIZE, OUTPUT_SIZE]
-        return x
+        return xx

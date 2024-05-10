@@ -5,7 +5,8 @@ class SurveyEmbeddings(torch.nn.Module):
     def __init__(self, vocab_size: int, n_questions: int = None, n_years: int = 14, embedding_dim: int = 16):
         super().__init__()
         # Vocab size is number of unique answers
-        self.answer_embedding = torch.nn.Embedding(vocab_size, embedding_dim)
+        self.answer_embedding = torch.nn.Embedding(
+            vocab_size, embedding_dim)
         self.yearly_embedding = torch.nn.Embedding(
             n_years, embedding_dim)  # 14 years of data
         if n_questions is not None:
