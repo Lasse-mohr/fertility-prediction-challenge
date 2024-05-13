@@ -10,6 +10,8 @@ number of folds, model, et cetera
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 import joblib
+import xgboost as xgb
+import submission
 
 def train_save_model(cleaned_df, outcome_df):
     """
@@ -29,10 +31,34 @@ def train_save_model(cleaned_df, outcome_df):
     model_df = model_df[~model_df['new_child'].isna()]
 
     # Logistic regression model
-    model = LogisticRegression()
+    scale_pos_weight =  model_df['new_child'].value_counts()[0] / model_df['new_child'].value_counts()[1]
+    
+    model = xgb.XGBClassifier(
+            objective='binary:logistic', 
+            use_label_encoder=False, 
+            eval_metric='logloss',
+            scale_pos_weight=scale_pos_weight, 
+            max_delta_step=1,
+            verbosity=0,
+            tree_method='exact',
+            learning_rate=0.1,
+            subsample=0.8,
+            reg_lambda = 5, #10
+            reg_alpha = 0.1, #0.1
+            )
 
-    # Fit the model
-    model.fit(model_df[['gender_bg', 'age']], model_df['new_child'])
-
+    # Fit the model # model_df['new_child'] is the target variable
+    model.fit(model_df.drop(['nomem_encr', 'new_child'], axis=1), model_df['new_child'])
+  
+    # print model fitting results
+    print(model)
+    
     # Save the model
     joblib.dump(model, "model.joblib")
+
+if __name__ == "__main__":
+    df = pd.read_csv("training_data/PreFer_train_data.csv")
+    outcome_df = pd.read_csv("training_data/PreFer_train_outcome.csv")
+
+    cleaned_df = submission.clean_df(df)
+    train_save_model(cleaned_df, outcome_df)
