@@ -22,11 +22,9 @@ import submission
 
 parser = argparse.ArgumentParser(description="Process data.")
 
-parser.add_argument("--data_path", help="Path to data data CSV file.", default='training_data/PreFer_fake_data.csv')
-
+parser.add_argument("data_path", help="Path to data data CSV file.", default='training_data/PreFer_fake_data.csv')
 parser.add_argument(
-    "--background_data_path", help="Path to background data data CSV file.", default='training_data/PreFer_fake_background_data.csv')
-
+    "background_data_path", help="Path to background data data CSV file.", default='training_data/PreFer_fake_background_data.csv')
 parser.add_argument(
     "--output", help="Path to prediction output CSV file.",default='training_data/PreFer_fake_outcome_.csv')
 
