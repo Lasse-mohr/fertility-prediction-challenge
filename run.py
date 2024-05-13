@@ -22,11 +22,11 @@ import submission
 
 parser = argparse.ArgumentParser(description="Process data.")
 
-parser.add_argument("data_path", help="Path to data data CSV file.")
+parser.add_argument("data_path", help="Path to data data CSV file.", default='training_data/PreFer_fake_data.csv')
 parser.add_argument(
-    "background_data_path", help="Path to background data data CSV file."
-)
-parser.add_argument("--output", help="Path to prediction output CSV file.")
+    "background_data_path", help="Path to background data data CSV file.", default='training_data/PreFer_fake_background_data.csv')
+parser.add_argument(
+    "--output", help="Path to prediction output CSV file.",default='training_data/PreFer_fake_outcome_.csv')
 
 args = parser.parse_args()
 
@@ -39,6 +39,13 @@ def predict(data_path, background_data_path, output):
     to a new output CSV file.
 
     This function should not be modified.
+    data_path: str: path to the data CSV file
+    background_data_path: str: path to the background data CSV file
+    output: str: path to the output CSV file
+    data_path = 'training_data/PreFer_fake_data.csv'
+    background_data_path = 'training_data/PreFer_fake_background_data.csv'
+    output = 'training_data/PreFer_fake_outcome_.csv'
+    
     """
 
     if output is None:
@@ -67,5 +74,6 @@ def predict(data_path, background_data_path, output):
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    print(args)
     predict(args.data_path, args.background_data_path, args.output)
 

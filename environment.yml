@@ -10,4 +10,4 @@ dependencies:
     - numpy
     - pandas
     - scikit-learn
-    - sentence-transformers
+    - xgboost==2.0.3
