@@ -11,3 +11,10 @@ dependencies:
     - pandas
     - scikit-learn
     - sentence-transformers
+    - polars
+    - pyarrow
+    - torch
+    - torchvision
+    - torchaudio
+    - tqdm
+

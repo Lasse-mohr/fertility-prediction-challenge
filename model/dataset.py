@@ -8,7 +8,7 @@ class PretrainingDataset(Dataset):
         for person_id, years_data in sequences.items():
             for year, sequence in years_data.items():
                 self.samples.append((year-2007, torch.tensor(sequence)))
-                
+
     def __len__(self):
         return len(self.samples)
 
@@ -18,13 +18,14 @@ class PretrainingDataset(Dataset):
     def get_seq_len(self):
         year, sequence = self.samples[0]
         return len(sequence)
-    
+
     def get_vocab_size(self):
         current_max = 0
         for year, sequence in self.samples:
             current_max = max(current_max, sequence.max().item())
         return current_max + 1
-    
+
+
 class FinetuningDataset(Dataset):
     def __init__(self, sequences: dict, targets: dict):
         """ We expect sequences to be pre-encoded and structered accordingly here"""
@@ -36,7 +37,7 @@ class FinetuningDataset(Dataset):
 
         self.sequences = sequences
         self.targets = targets
-                
+
     def __len__(self):
         return len(self.sequences)
 
@@ -44,4 +45,3 @@ class FinetuningDataset(Dataset):
         person_id = self.keys[idx]
 
         return self.sequences[person_id], self.targets[person_id]
-
