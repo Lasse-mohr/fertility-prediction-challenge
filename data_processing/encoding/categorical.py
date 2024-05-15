@@ -1,18 +1,37 @@
+from ast import literal_eval
+from os.path import isdir
+from os import makedirs
 import re
 import pandas as pd
 import itertools
 from sklearn.base import BaseEstimator, TransformerMixin
 
 
-class CategoricalTransformer(BaseEstimator, TransformerMixin):
-    def fit(self, codebook):
-        # Get categorical core questions
-        core_cat_df = codebook[(codebook.year.notna()) & (codebook.type_var == 'categorical')].copy()
+class test_dataCategoricalTransformer(BaseEstimator, TransformerMixin):
+    def fit(self, codebook, use_codebook=True,
+           save_inter_path='data/codebook_false/CategoricalTransformer/'):
 
-        # Convert strings to list
-        core_cat_df['values_cat'] = core_cat_df['values_cat'].str.split("; ").apply(lambda x: [e.strip() for e in x])
-        core_cat_df['labels_cat'] = core_cat_df['labels_cat'].str.split("; ").apply(lambda x: [e.strip() for e in x])
+        core_cat_path = save_inter_path + 'core_cat.csv'
 
+        if use_codebook:
+            # Get categorical core questions
+            core_cat_df = codebook[(codebook.year.notna()) & (codebook.type_var == 'categorical')].copy()
+
+            # Convert strings to list
+            core_cat_df['values_cat'] = core_cat_df['values_cat'].str.split("; ").apply(lambda x: [e.strip() for e in x])
+            core_cat_df['labels_cat'] = core_cat_df['labels_cat'].str.split("; ").apply(lambda x: [e.strip() for e in x])
+
+            if not isdir(save_inter_path):
+                makedirs(save_inter_path)
+
+            core_cat_df[['values_cat', 'labels_cat', 'var_name']].to_csv(core_cat_path)
+
+        else:
+            core_cat_df = pd.read_csv(core_cat_path, index_col=0)
+            # reads as strings, change back to lists of integers or list of strings
+            core_cat_df['values_cat'] = core_cat_df['values_cat'].apply(self.list_string_to_int_list)
+            core_cat_df['labels_cat'] = core_cat_df['labels_cat'].apply(literal_eval)
+            
         # Init vars
         vocab = {'UNK': 101} # We reserve the first 101 for quantiles
         vocab_max = 102 # (102)
@@ -28,7 +47,7 @@ class CategoricalTransformer(BaseEstimator, TransformerMixin):
             for _, subgroup in itertools.groupby(pairs, key=lambda x: x[0]):
                 labels = [label for _, label in subgroup]
                 # We encode single labels last
-                if len(labels) <= 1:    
+                if len(labels) <= 1:
                     single_labels.append(labels[0])
                     continue
                 elif len(labels) >= 2: # When labels changed for a question
@@ -62,15 +81,22 @@ class CategoricalTransformer(BaseEstimator, TransformerMixin):
             row['var_name']: {value: vocab[label] for value, label in zip(row['values_cat'], row['labels_cat'])}
             for _, row in core_cat_df.iterrows()
         }
-        
+
         self.vocab = vocab
+
+    def list_string_to_int_list(self, str):
+        """ Used for converting from list like "['1', '2', '3']" to list like [1,2,3]
+
+            Used when after reading core_cat_df back when use_codebook=False
+        """
+        return [int(num) for num in literal_eval(str)]
 
     def transform(self, df):
         if isinstance(df, pd.Series):
             return self.transform_series(df)
         elif isinstance(df, pd.DataFrame):
             return df.apply(self.transform_series)
-        
+
     def transform_series(self, series: pd.Series):
         return series.apply(lambda x: self.tokenize(x, self.converter[series.name]))
 
@@ -86,12 +112,12 @@ class CategoricalTransformer(BaseEstimator, TransformerMixin):
         if self.if_all_digits(labels) or self.is_negative_edge_case(question_key, labels):
             return False
         return False
-    
+
     def tokenize(self, value, series_converter: dict):
         if pd.notna(value):
             value = str(int(value))
         return series_converter.get(value, self.vocab['UNK'])
-    
+
     def max(self):
         return max(self.vocab.values())
 
@@ -105,7 +131,7 @@ class CategoricalTransformer(BaseEstimator, TransformerMixin):
         pairs = group.apply(lambda row: list(zip(row['values_cat'], row['labels_cat'])), axis=1)
         pairs = set(sum(pairs.tolist(), []))
         return pairs
-    
+
     @staticmethod
     def if_all_digits(labels): #Also counts dates
         """ Checks whether all labels are digits, should be falsified"""

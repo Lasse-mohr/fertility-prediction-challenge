@@ -67,20 +67,20 @@ def remove_question_type(df_x):
     if 'nomem_encr' in intersection:
         intersection.remove('nomem_encr')
     return df_x.drop(columns=intersection)
-    
-    
+
+
 def save_data(df_x,df_y, path='training_data/',fname='louis'):
-    
+
     print(np.sum(df_x['nomem_encr'] == df_y['nomem_encr']) == len(df_x))
     #df_x.drop('nomem_encr', axis=1, inplace=True)
     df_y.drop('nomem_encr', axis=1, inplace=True)
     df_x.drop('outcome_available', axis=1, inplace=True)
-    
+
     df_x.to_csv(path+f'PreFer_train_data_{fname}.csv', index=False)
     df_y.to_csv(path+f'PreFer_train_outcome_{fname}.csv', index=False)
     return None
-    
-    
+
+
 if __name__ == '__main__':
     path_for_PreFer_folder = ''
     threshold = 0.8

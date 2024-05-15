@@ -10,4 +10,11 @@ dependencies:
     - numpy
     - pandas
     - scikit-learn
-    - xgboost==2.0.3
+    - xgboost==2.0.3    
+    - polars
+    - pyarrow
+    - torch
+    - torchvision
+    - torchaudio
+    - tqdm
+
