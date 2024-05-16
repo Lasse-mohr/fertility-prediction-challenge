@@ -136,3 +136,44 @@ class _AutoEncoder(nn.Module):
 
     def get_encoding_dim(self):
         return self.encoding_dim
+    
+
+class SimpleAutoEncoder(nn.Module):
+    def __init__(self, vocab_size, sequence_len, embedding_size) -> None:
+        super().__init__()
+
+        self.embedding = SurveyEmbeddings(
+            vocab_size, sequence_len, n_years=14, embedding_dim=256)
+
+        self.cls = nn.Sequential(
+            nn.Linear(256, vocab_size, bias=False)
+        )
+
+        self.encoder = nn.Sequential(
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, 16),
+        )
+
+        self.decoder = nn.Sequential(
+            nn.Linear(16, 32),
+            nn.ReLU(),
+            nn.Linear(32, 64),
+            nn.ReLU(),
+            nn.Linear(64, 128),
+            nn.ReLU(),
+            nn.Linear(128, 256),
+        )
+
+    def forward(self, year, seq, encode_only=False):
+        x = self.embedding(year, seq)
+        xx = self.encoder(x)
+        if encode_only:
+            return xx
+        xx = self.decoder(xx)
+        xx = self.cls(xx)
+        return x, xx
