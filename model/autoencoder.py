@@ -136,7 +136,7 @@ class _AutoEncoder(nn.Module):
 
     def get_encoding_dim(self):
         return self.encoding_dim
-    
+
 
 class SimpleAutoEncoder(nn.Module):
     def __init__(self, vocab_size, sequence_len, embedding_size) -> None:
@@ -173,7 +173,7 @@ class SimpleAutoEncoder(nn.Module):
         x = self.embedding(year, seq)
         xx = self.encoder(x)
         if encode_only:
-            return xx
+            return xx  # What is the shape here ?
         xx = self.decoder(xx)
         xx = self.cls(xx)
         return x, xx
