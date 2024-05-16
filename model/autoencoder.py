@@ -152,16 +152,22 @@ class SimpleAutoEncoder(nn.Module):
         self.encoder = nn.Sequential(
             nn.Linear(embedding_size, embedding_size // 2),
             nn.Mish(),
+            nn.LayerNorm(embedding_size // 2),
             nn.Linear(embedding_size // 2, embedding_size // 4),
             nn.Mish(),
+            nn.LayerNorm(embedding_size // 4),
             nn.Linear(embedding_size // 4, embedding_size // 8),
+            nn.LayerNorm(embedding_size // 8)
         )
 
         self.decoder = nn.Sequential(
             nn.Linear(embedding_size // 8, embedding_size // 4),
             nn.Mish(),
+            nn.LayerNorm(embedding_size // 4),
+
             nn.Linear(embedding_size // 4, embedding_size // 2),
-            nn.ReLU(),
+            nn.Mish(),
+            nn.LayerNorm(embedding_size // 2),
             nn.Linear(embedding_size // 2, embedding_size),
 
         )
@@ -176,7 +182,7 @@ class SimpleAutoEncoder(nn.Module):
         x = self.out(x)
         return x
 
-    def encode(self, year, seq):
+    def get_encoding(self, year, seq):
         """
         Method that return the embedding of the survey
         """
