@@ -109,9 +109,8 @@ class GRUDecoder(nn.Module):
         # x = x[sorted_idx]
 
         # packed_x = pack_padded_sequence(x, lengths.cpu(), batch_first=True)
-        mask = None
-        h0 = self.h0(x.size(0)).to(x.device)
-        xx, _ = self.gru(x, h0)
+        # h0 = self.h0(x.size(0)).to(x.device)
+        xx, _ = self.gru(x)
         # x, _ = pad_packed_sequence(
         #    packed_x, batch_first=True, total_length=self.max_seq_len)
 
