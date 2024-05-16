@@ -3,9 +3,8 @@ from os.path import isdir, isfile
 import pickle
 import pandas as pd
 
-def to_sequences(df, codebook, use_codebook=True,
-                save_inter_path='data/codebook_false/to_sequences/'
-                ):
+def to_sequences(df, codebook, use_codebook=True, custom_pairs=None,
+                save_inter_path='data/codebook_false/to_sequences/',):
     """
         Arguments:
             use_codebook (bool): determines if the codebook is used to group columns
@@ -23,16 +22,17 @@ def to_sequences(df, codebook, use_codebook=True,
         codebook['year'] = codebook['year'].astype(int)
 
         # Get all question pairs
-        pairs = codebook['var_name'].apply(get_pairs)
+        codebook["pairs"] = codebook['var_name'].apply(get_pairs)
+        if custom_pairs is not None:
+            codebook = codebook[codebook["pairs"].isin(custom_pairs)]
         var_name_index = {}
-        for i, (_, x) in enumerate(codebook.groupby(pairs, sort=False)):
+        for i, (_, x) in enumerate(codebook.groupby("pairs", sort=False)):
             for _, row in x.iterrows():
                 var_name_index[row['var_name']] = (row.year, i)
 
         if not isdir(save_inter_path):
             makedirs(save_inter_path)
 
-        pairs.to_csv(pair_path, index=False)
         with open(var_name_index_path, 'wb') as file:
             pickle.dump(var_name_index, file, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -55,7 +55,8 @@ def to_sequences(df, codebook, use_codebook=True,
 
     pids = df['nomem_encr']
     # Create dict of {pid: {year: sequences}}
-    seq = {pid: {year: [101]*(len(set(pairs))) for year in codebook['year'].unique()} for pid in pids}    # 101 is UNK
+    N = len(codebook['pairs'].unique())
+    seq = {pid: {year: [101]*N for year in codebook['year'].unique()} for pid in pids}    # 101 is UNK
     for column, (year, idx) in var_name_index.items():
         if column not in df:    # If column isn't present, we skip it (defaulting to 101)
             continue

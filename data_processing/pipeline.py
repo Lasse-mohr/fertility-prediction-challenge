@@ -3,10 +3,10 @@ from os import makedirs
 import pandas as pd
 from data_processing.encoding.categorical import CategoricalTransformer
 from data_processing.encoding.numeric_and_date import ToQuantileTransformer
-from data_processing.sequences.sequencing import to_sequences
+from data_processing.sequences.sequencing import to_sequences, get_pairs
 
 
-def encoding_pipeline(data, codebook=None, use_codebook=True,
+def encoding_pipeline(data, codebook=None, use_codebook=True, custom_pairs=None,
      save_inter_path='data/codebook_false/encoding_pipeline/',
      ):
 
@@ -16,6 +16,10 @@ def encoding_pipeline(data, codebook=None, use_codebook=True,
     if use_codebook:
         # Select only questions with yearly component
         codebook = codebook[codebook.year.notna()]
+        # Get all question pairs
+        if custom_pairs is not None:
+            codebook["pairs"] = codebook['var_name'].apply(get_pairs)
+            codebook = codebook[codebook["pairs"].isin(custom_pairs)]
 
         # Get relevant columns
         categorical_columns = codebook[codebook.type_var == 'categorical'].var_name
@@ -60,6 +64,6 @@ def encoding_pipeline(data, codebook=None, use_codebook=True,
     data = data[data.columns[data.dtypes != 'object']] # Drop object columns (automatically filled with 101 in to_sequences)
 
     # Convert to sequences
-    sequences = to_sequences(data, codebook, use_codebook=use_codebook)
+    sequences = to_sequences(data, codebook, use_codebook=use_codebook, custom_pairs=custom_pairs, save_inter_path=save_inter_path)
 
     return sequences
