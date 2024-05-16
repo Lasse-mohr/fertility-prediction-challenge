@@ -139,41 +139,47 @@ class _AutoEncoder(nn.Module):
 
 
 class SimpleAutoEncoder(nn.Module):
-    def __init__(self, vocab_size, sequence_len, embedding_size) -> None:
+    def __init__(self, vocab_size, sequence_len: int, embedding_size: int) -> None:
         super().__init__()
 
         self.embedding = SurveyEmbeddings(
-            vocab_size, sequence_len, n_years=14, embedding_dim=256)
+            vocab_size, sequence_len, n_years=14, embedding_dim=embedding_size)
 
-        self.cls = nn.Sequential(
-            nn.Linear(256, vocab_size, bias=False)
+        self.out = nn.Sequential(
+            nn.Linear(embedding_size, vocab_size, bias=False)
         )
 
         self.encoder = nn.Sequential(
-            nn.Linear(256, 128),
-            nn.ReLU(),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Linear(64, 32),
-            nn.ReLU(),
-            nn.Linear(32, 16),
+            nn.Linear(embedding_size, embedding_size // 2),
+            nn.Mish(),
+            nn.Linear(embedding_size // 2, embedding_size // 4),
+            nn.Mish(),
+            nn.Linear(embedding_size // 4, embedding_size // 8),
         )
 
         self.decoder = nn.Sequential(
-            nn.Linear(16, 32),
+            nn.Linear(embedding_size // 8, embedding_size // 4),
+            nn.Mish(),
+            nn.Linear(embedding_size // 4, embedding_size // 2),
             nn.ReLU(),
-            nn.Linear(32, 64),
-            nn.ReLU(),
-            nn.Linear(64, 128),
-            nn.ReLU(),
-            nn.Linear(128, 256),
+            nn.Linear(embedding_size // 2, embedding_size),
+
         )
 
-    def forward(self, year, seq, encode_only=False):
-        x = self.embedding(year, seq)
-        xx = self.encoder(x)
-        if encode_only:
-            return xx  # What is the shape here ?
-        xx = self.decoder(xx)
-        xx = self.cls(xx)
-        return x, xx
+    def forward(self, year, seq):
+        """
+        Method that returns full encoding-decoding
+        """
+        embeddings = self.embedding(year, seq)
+        x = self.encoder(embeddings)
+        x = self.decoder(x)
+        x = self.out(x)
+        return x
+
+    def encode(self, year, seq):
+        """
+        Method that return the embedding of the survey
+        """
+        embeddings = self.embedding(year, seq)
+        x = self.encoder(embeddings)
+        return x

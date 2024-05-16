@@ -2,9 +2,13 @@ from os import makedirs
 from os.path import isdir, isfile
 import pickle
 import pandas as pd
+import re
+
+PID_col = 'nomem_encr'
+
 
 def to_sequences(df, codebook, use_codebook=True, custom_pairs=None,
-                save_inter_path='data/codebook_false/to_sequences/',):
+                 save_inter_path='data/codebook_false/to_sequences/',):
     """
         Arguments:
             use_codebook (bool): determines if the codebook is used to group columns
@@ -22,7 +26,7 @@ def to_sequences(df, codebook, use_codebook=True, custom_pairs=None,
         codebook['year'] = codebook['year'].astype(int)
 
         # Get all question pairs
-        codebook["pairs"] = codebook['var_name'].apply(get_pairs)
+        codebook["pairs"] = codebook['var_name'].apply(get_generic_name)
         if custom_pairs is not None:
             codebook = codebook[codebook["pairs"].isin(custom_pairs)]
         var_name_index = {}
@@ -50,22 +54,50 @@ def to_sequences(df, codebook, use_codebook=True, custom_pairs=None,
             with open(var_name_index_path, 'rb') as file:
                 var_name_index = pickle.load(file)
         else:
-            print(f'File with variable indices not found at: {var_name_index_path}')
+            print(
+                f'File with variable indices not found at: {var_name_index_path}')
             print('Call to_sequences with use_codebook=True to create file')
 
-    pids = df['nomem_encr']
+    pids = df[PID_col]
     # Create dict of {pid: {year: sequences}}
     N = len(codebook['pairs'].unique())
-    seq = {pid: {year: [101]*N for year in codebook['year'].unique()} for pid in pids}    # 101 is UNK
+    seq = {pid: {year: [101]*N for year in codebook['year'].unique()}
+           for pid in pids}    # 101 is UNK
     for column, (year, idx) in var_name_index.items():
-        if column not in df:    # If column isn't present, we skip it (defaulting to 101)
+        # If column isn't present, we skip it (defaulting to 101)
+        if column not in df:
             continue
         for pid, val in zip(pids, df[column]):
             seq[pid][year][idx] = val
 
     return seq
 
+
+def get_generic_name(var_name: str):
+    """
+    Returns standardized name of the column if possible: XXNNN, but only if the string starts with 'c'.
+    """
+    if var_name.startswith('c'):
+        if var_name.endswith('_m'):
+            return var_name[:2] + var_name[-1]
+        else:
+            return var_name[:2] + var_name[-3:]
+    else:
+        return var_name.split("_")[0]
+
+# DEPRECATED
+
+
 def get_pairs(var_name):
+    """
+    Return standardized names of columns in the form CANNN or CAM.
+
+    Parameters:
+    var_name (str): The original column name.
+
+    Returns:
+    str: The standardized column name.
+    """
     if var_name.startswith('c'):
         if var_name.endswith('_m'):
             return var_name[:2] + var_name[-1]
