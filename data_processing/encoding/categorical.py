@@ -7,7 +7,7 @@ import itertools
 from sklearn.base import BaseEstimator, TransformerMixin
 
 
-class test_dataCategoricalTransformer(BaseEstimator, TransformerMixin):
+class CategoricalTransformer(BaseEstimator, TransformerMixin):
     def fit(self, codebook, use_codebook=True,
            save_inter_path='data/codebook_false/CategoricalTransformer/'):
 
