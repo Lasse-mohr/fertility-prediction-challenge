@@ -126,3 +126,20 @@ class GRUDecoder(nn.Module):
         xx = self.decoder(xx)
         # (previous) returns the shape [BATCH_SIZE, OUTPUT_SIZE]
         return xx
+
+
+class SimpleDecoder(nn.Module):
+    def __init__(self,
+                 input_size: int,
+                 output_size: int) -> None:
+        super().__init__()
+        self.out = nn.Linear(input_size, output_size, bias=False)
+
+    def forward(self, x, mask=None):
+        if mask is not None:
+            denom = torch.sum(mask, -1, keepdim=True)
+            x = torch.div(torch.sum(x * mask.unsqueeze(-1), dim=1), denom)
+        else:
+            x = torch.sum(x, dim=1)
+
+        return self.out(x)
