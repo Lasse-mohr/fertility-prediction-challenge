@@ -16,10 +16,13 @@ class SurveyEmbeddings(torch.nn.Module):
                 "question_range", torch.arange(n_questions))  # )
             # self.question_range = torch.arange(n_questions) # Fixed range of questions
 
+        self.register_parameter("alpha", torch.nn.Parameter(
+            torch.tensor([0.0]), requires_grad=True))
+
     def forward(self, year, answer):
         answer = self.answer_embedding(answer)
         year = self.yearly_embedding(year)
-        embeddings = answer + year.unsqueeze(1)
+        embeddings = answer + self.alpha * year.unsqueeze(1)
         if hasattr(self, 'question_embedding'):
             embeddings += self.question_embedding(self.question_range)
         return embeddings

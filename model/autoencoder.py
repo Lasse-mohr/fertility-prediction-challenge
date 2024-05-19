@@ -1,7 +1,131 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from model.layers import ConvEncoderLayer, ConvDecoderLayer, Norm
+from model.layers import ConvEncoderLayer, ConvDecoderLayer
 from model.embeddings import SurveyEmbeddings
+from torch_frame.nn.conv import TabTransformerConv, ExcelFormerConv
+from torch_frame.nn.decoder import ExcelFormerDecoder
+
+
+class TabularEncoder(nn.Module):
+    """
+    Encoder that models the interaction between the columns of the SurveyEmbeddings
+    """
+
+    def __init__(self, vocab_size,
+                 sequence_len: int,
+                 embedding_size: int,
+                 output_size: int,
+                 num_cols: int,
+                 num_layers: int = 3,
+                 num_heads: int = 4,
+                 dropout: float = 0.1,
+                 layer_type: str = "conv") -> None:
+        """
+        Args:
+            layer_type: either use convolution of attention to model the interactions
+        """
+        super().__init__()
+        assert layer_type in ["excel", "conv"], "Wrong layer type"
+        self.embedding = SurveyEmbeddings(
+            vocab_size, sequence_len, n_years=14, embedding_dim=embedding_size)
+
+        if layer_type == "conv":
+            self.encoders = nn.ModuleList([
+                nn.Sequential(
+                    TabTransformerConv(channels=embedding_size,
+                                       num_heads=num_heads,
+                                       attn_dropout=dropout,
+                                       ffn_dropout=dropout),
+                    nn.Mish(),
+                    nn.InstanceNorm1d(sequence_len))
+                for _ in range(num_layers)])
+        elif layer_type == "excel":
+            self.encoders = nn.ModuleList([
+                nn.Sequential(
+                    ExcelFormerConv(channels=embedding_size,
+                                    num_cols=num_cols,
+                                    num_heads=num_heads,
+                                    diam_dropout=dropout,
+                                    aium_dropout=dropout,
+                                    residual_dropout=dropout),
+                    nn.Mish(),
+                    nn.InstanceNorm1d(sequence_len)
+                )
+                for _ in range(num_layers)])
+
+        # this layer just aggregates the representation of column into one embedding
+        self.flatten = ExcelFormerDecoder(in_channels=embedding_size,
+                                          out_channels=output_size,
+                                          num_cols=num_cols)
+
+    def forward(self, year, seq):
+        """
+        Method that returns full encoding-decoding
+        """
+        x = self.embedding(year, seq)
+        for encoder in self.encoders:
+            x = encoder(x)
+        x = self.flatten(x)
+        return x
+
+    def get_encoding(self, year, seq):
+        """
+        Method that return the embedding of the survey
+        """
+        return self.forward(year, seq)
+
+
+class SimpleAutoEncoder(nn.Module):
+    def __init__(self, vocab_size, sequence_len: int, embedding_size: int) -> None:
+        super().__init__()
+
+        self.embedding = SurveyEmbeddings(
+            vocab_size, sequence_len, n_years=14, embedding_dim=embedding_size)
+
+        self.out = nn.Sequential(
+            nn.Linear(embedding_size, vocab_size, bias=False)
+        )
+
+        self.encoder = nn.Sequential(
+            nn.Linear(embedding_size, embedding_size // 2),
+            nn.Mish(),
+            nn.LayerNorm(embedding_size // 2),
+            nn.Linear(embedding_size // 2, embedding_size // 4),
+            nn.Mish(),
+            nn.LayerNorm(embedding_size // 4),
+            nn.Linear(embedding_size // 4, embedding_size // 8),
+            nn.LayerNorm(embedding_size // 8)
+        )
+
+        self.decoder = nn.Sequential(
+            nn.Linear(embedding_size // 8, embedding_size // 4),
+            nn.Mish(),
+            nn.LayerNorm(embedding_size // 4),
+
+            nn.Linear(embedding_size // 4, embedding_size // 2),
+            nn.Mish(),
+            nn.LayerNorm(embedding_size // 2),
+            nn.Linear(embedding_size // 2, embedding_size),
+
+        )
+
+    def forward(self, year, seq):
+        """
+        Method that returns full encoding-decoding
+        """
+        embeddings = self.embedding(year, seq)
+        x = self.encoder(embeddings)
+        x = self.decoder(x)
+        x = self.out(x)
+        return x
+
+    def get_encoding(self, year, seq):
+        """
+        Method that return the embedding of the survey
+        """
+        embeddings = self.embedding(year, seq)
+        x = self.encoder(embeddings)
+        return x
 
 
 class AutoEncoder(nn.Module):
@@ -75,117 +199,3 @@ class AutoEncoder(nn.Module):
         x = x.permute(0, 2, 1)
         logits = self.cls(x)
         return x, logits
-
-
-################
-# ARCHIVE
-class _AutoEncoder(nn.Module):
-    def __init__(self, num_embeddings: int,
-                 encoding_dim: int = 16,
-                 dropout: float = 0.2) -> None:
-        super(_AutoEncoder, self).__init__()
-
-        self.encoding_dim = encoding_dim
-        self.embed = nn.Embedding(num_embeddings, 512)
-        self.encoder = nn.Sequential(
-            nn.Linear(512, 256),
-            nn.Mish(),
-            nn.LayerNorm(256),
-            nn.AlphDropout(p=dropout),
-            nn.Linear(256, 128),
-            nn.Mish(),
-            nn.LayerNorm(128),
-            nn.AlphDropout(p=dropout),
-            nn.Linear(128, 64),
-            nn.Mish(),
-            nn.LayerNorm(64),
-            nn.AlphDropout(p=dropout),
-            nn.Linear(64, 32),
-            nn.Mish(),
-            nn.LayerNorm(64),
-            # nn.AlphDropout(p=dropout),
-            nn.Linear(32, encoding_dim),
-        )
-
-        self.decoder = nn.Sequential(
-            nn.Linear(encoding_dim, 32),
-            nn.Mish(),
-            nn.Linear(32, 64),
-            nn.Mish(),
-            nn.Linear(64, 128),
-            nn.Mish(),
-            nn.Linear(128, 256),
-            nn.Mish(),
-            nn.Linear(256, 512),
-        )
-
-    def forward(self, x):
-        x = self.embed(x)
-
-        x = self.encoder(x)
-        x = self.decoder(x)
-        return x
-
-    def get_loss(self, x):
-        x_hat = self.forward(x)
-        return F.mse_loss(x_hat, self.embed(x))
-
-    def embed_and_encode(self, x):
-        x = self.embed(x)
-        return self.encode(x)
-
-    def get_encoding_dim(self):
-        return self.encoding_dim
-
-
-class SimpleAutoEncoder(nn.Module):
-    def __init__(self, vocab_size, sequence_len: int, embedding_size: int) -> None:
-        super().__init__()
-
-        self.embedding = SurveyEmbeddings(
-            vocab_size, sequence_len, n_years=14, embedding_dim=embedding_size)
-
-        self.out = nn.Sequential(
-            nn.Linear(embedding_size, vocab_size, bias=False)
-        )
-
-        self.encoder = nn.Sequential(
-            nn.Linear(embedding_size, embedding_size // 2),
-            nn.Mish(),
-            nn.LayerNorm(embedding_size // 2),
-            nn.Linear(embedding_size // 2, embedding_size // 4),
-            nn.Mish(),
-            nn.LayerNorm(embedding_size // 4),
-            nn.Linear(embedding_size // 4, embedding_size // 8),
-            nn.LayerNorm(embedding_size // 8)
-        )
-
-        self.decoder = nn.Sequential(
-            nn.Linear(embedding_size // 8, embedding_size // 4),
-            nn.Mish(),
-            nn.LayerNorm(embedding_size // 4),
-
-            nn.Linear(embedding_size // 4, embedding_size // 2),
-            nn.Mish(),
-            nn.LayerNorm(embedding_size // 2),
-            nn.Linear(embedding_size // 2, embedding_size),
-
-        )
-
-    def forward(self, year, seq):
-        """
-        Method that returns full encoding-decoding
-        """
-        embeddings = self.embedding(year, seq)
-        x = self.encoder(embeddings)
-        x = self.decoder(x)
-        x = self.out(x)
-        return x
-
-    def get_encoding(self, year, seq):
-        """
-        Method that return the embedding of the survey
-        """
-        embeddings = self.embedding(year, seq)
-        x = self.encoder(embeddings)
-        return x

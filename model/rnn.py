@@ -60,13 +60,8 @@ class GRUDecoder(nn.Module):
         gru_dropout = 0.0 if num_layers == 1 else dropout
         self.post_gru_size = 2 * hidden_size if bidirectional else hidden_size
 
-        self.in_layer = nn.Sequential(
-            nn.LazyInstanceNorm1d(),  # maybe do a batch norm?
-            nn.Dropout(p=dropout),
-            nn.LazyLinear(input_size),
-            # nn.Mish(),
-            nn.LayerNorm(input_size)
-        )
+        self.norm_in = nn.InstanceNorm1d(num_features=max_seq_len,
+                                         affine=True)
 
         self.gru = nn.GRU(
             batch_first=True,
@@ -77,34 +72,23 @@ class GRUDecoder(nn.Module):
             dropout=gru_dropout
         )
 
-        # self.post_gru = nn.Sequential(
-        #    nn.Mish(),
-        #    nn.LayerNorm(normalized_shape=self.post_gru_size),
-        #    nn.Dropout(p=dropout),
-        #    nn.Linear(self.post_gru_size, self.hidden_size),
-        #    nn.Mish(),
-        #    nn.LayerNorm(normalized_shape=self.hidden_size)
-        # )
-
         if with_attention:
             self.aggregation = AggAttention(hidden_size=self.hidden_size)
         else:
             self.aggregation = self.mean
 
         # Output Layer
+        self.norm_out = nn.LayerNorm(self.hidden_size)
         self.decoder = nn.Linear(
             self.hidden_size, self.output_size, bias=False)
 
         if xavier_initialization:
             self.init_parameters()
 
-        print("The model is going to set all input MASK to None")
-
     def init_parameters(self):
         """
         Initialize the parameters with Xavier Initialization.
         """
-        # nn.init.xavier_uniform_(self.in_layer[2].weight, gain=2/3)
         nn.init.xavier_uniform_(self.decoder.weight, gain=1.0)
 
     def mean(self, x, mask):
@@ -123,19 +107,15 @@ class GRUDecoder(nn.Module):
         """
 
         # This layer makes sure that dimensions are aligned and normalized
-        x = self.in_layer(x)
         # (previous) returns [BATCH_SIZE, MAX_SEQ_LEN, HIDDEN_SIZE]
-
+        x = self.norm_in(x)
         if mask is not None:
             x = x * mask.unsqueeze(-1)
-
         xx, _ = self.gru(x)
         # (previous) returns the shape [BATCH_SIZE, MAX_SEQ_LEN, HIDDEN_SIZE]
-        ######
-        # xx = self.post_gru(xx)
-        # (previous) returns  the shape [BATCH_SIZE, MAX_SEQ_LEN, HIDDEN_SIZE]
         xx = self.aggregation(xx, mask=mask)
         # (previous) returns the shape [BATCH_SIZE, HIDDEN_SIZE]
+        xx = self.norm_out(xx)
         xx = self.decoder(xx)
         # (previous) returns the shape [BATCH_SIZE, OUTPUT_SIZE]
         return xx
