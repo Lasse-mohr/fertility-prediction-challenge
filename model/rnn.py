@@ -60,6 +60,14 @@ class GRUDecoder(nn.Module):
         gru_dropout = 0.0 if num_layers == 1 else dropout
         self.post_gru_size = 2 * hidden_size if bidirectional else hidden_size
 
+        self.in_layer = nn.Sequential(
+            nn.LazyInstanceNorm1d(),  # maybe do a batch norm?
+            nn.Dropout(p=dropout),
+            nn.LazyLinear(input_size),
+            # nn.Mish(),
+            nn.LayerNorm(input_size)
+        )
+
         self.gru = nn.GRU(
             batch_first=True,
             input_size=self.input_size,
@@ -82,6 +90,8 @@ class GRUDecoder(nn.Module):
             self.aggregation = AggAttention(hidden_size=self.hidden_size)
         else:
             self.aggregation = self.mean
+
+        # Output Layer
         self.decoder = nn.Linear(
             self.hidden_size, self.output_size, bias=False)
 
@@ -94,7 +104,7 @@ class GRUDecoder(nn.Module):
         """
         Initialize the parameters with Xavier Initialization.
         """
-        # nn.init.xavier_uniform_(self.post_gru[3].weight, gain=2/3)
+        # nn.init.xavier_uniform_(self.in_layer[2].weight, gain=2/3)
         nn.init.xavier_uniform_(self.decoder.weight, gain=1.0)
 
     def mean(self, x, mask):
@@ -111,24 +121,16 @@ class GRUDecoder(nn.Module):
             x: [BATCH_SIZE, MAX_SEQUENCE_LEN, INPUT_SIZE], it is important to concatenate all the existing questionnaire embedding and then pad them
             mask: binary tensor [BATCH_SIZE, MAX_SEQ_LEN] (False stands for the padded element)
         """
-        ######
-        # this part is specific to RNNs and padded sequences
-        # lengths = mask.sum(dim=1)
-        # lengths, sorted_idx = lengths.sort(0, descending=True)
-        # x = x[sorted_idx]
 
-        # packed_x = pack_padded_sequence(x, lengths.cpu(), batch_first=True)
-        # h0 = self.h0(x.size(0)).to(x.device)
+        # This layer makes sure that dimensions are aligned and normalized
+        x = self.in_layer(x)
+        # (previous) returns [BATCH_SIZE, MAX_SEQ_LEN, HIDDEN_SIZE]
+
         if mask is not None:
             x = x * mask.unsqueeze(-1)
-        xx, _ = self.gru(x)
-        # x, _ = pad_packed_sequence(
-        #    packed_x, batch_first=True, total_length=self.max_seq_len)
 
-        # _, original_idx = sorted_idx.sort(0)
-        # x = x[original_idx]
+        xx, _ = self.gru(x)
         # (previous) returns the shape [BATCH_SIZE, MAX_SEQ_LEN, HIDDEN_SIZE]
-        # RNN section ends
         ######
         # xx = self.post_gru(xx)
         # (previous) returns  the shape [BATCH_SIZE, MAX_SEQ_LEN, HIDDEN_SIZE]
