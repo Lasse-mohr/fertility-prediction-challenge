@@ -4,10 +4,10 @@ channels:
   - conda-forge
 dependencies:
   - matplotlib
+  - joblib
   - pip
   - pip:
-    - joblib
-    - numpy
+    - numpy=1.26.0
     - pandas
     - scikit-learn
     - xgboost==2.0.3    
@@ -17,4 +17,7 @@ dependencies:
     - torchvision
     - torchaudio
     - tqdm
-
+    - torch_frame
+    - jupyterlab
+    - ipykernel
+    - umap-learn

@@ -76,8 +76,10 @@ class TabularEncoder(nn.Module):
 
 
 class SimpleAutoEncoder(nn.Module):
-    def __init__(self, vocab_size, sequence_len: int, embedding_size: int) -> None:
+    def __init__(self, vocab_size, sequence_len: int, embedding_size: int, dropout = 0.1) -> None:
         super().__init__()
+
+        self.dropout = dropout
 
         self.embedding = SurveyEmbeddings(
             vocab_size, sequence_len, n_years=14, embedding_dim=embedding_size)
@@ -90,23 +92,26 @@ class SimpleAutoEncoder(nn.Module):
             nn.Linear(embedding_size, embedding_size // 2),
             nn.Mish(),
             nn.LayerNorm(embedding_size // 2),
+            nn.Dropout(self.dropout),
             nn.Linear(embedding_size // 2, embedding_size // 4),
             nn.Mish(),
             nn.LayerNorm(embedding_size // 4),
+            nn.Dropout(self.dropout),
             nn.Linear(embedding_size // 4, embedding_size // 8),
-            nn.LayerNorm(embedding_size // 8)
+            nn.LayerNorm(embedding_size // 8),
+            nn.Dropout(self.dropout),
         )
 
         self.decoder = nn.Sequential(
             nn.Linear(embedding_size // 8, embedding_size // 4),
             nn.Mish(),
             nn.LayerNorm(embedding_size // 4),
-
+            nn.Dropout(self.dropout),
             nn.Linear(embedding_size // 4, embedding_size // 2),
             nn.Mish(),
             nn.LayerNorm(embedding_size // 2),
+            nn.Dropout(self.dropout),
             nn.Linear(embedding_size // 2, embedding_size),
-
         )
 
     def forward(self, year, seq):
