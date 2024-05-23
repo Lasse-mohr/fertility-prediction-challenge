@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
+import torch
 
 from torch_frame.nn.conv import TableConv
 from torch_frame.nn.conv.tab_transformer_conv import GEGLU, FFN, SelfAttention
@@ -26,12 +27,16 @@ class CustomTabTransformerConv(TableConv):
         self.norm_2 = nn.LayerNorm(channels)
         self.ffn = AiuM(channels, auim_dropout)
         self.reset_parameters()
+        self.register_parameter("alpha", nn.Parameter(
+            torch.tensor([0.0]), requires_grad=True))
+        self.register_parameter("beta", nn.Parameter(
+            torch.tensor([0.0]), requires_grad=True))
 
     def forward(self, x: Tensor) -> Tensor:
         x = self.norm_1(x)
         out = self.attn(x)
-        x = x + out
-        x = self.ffn(x)
+        x = x + self.alpha * out
+        x = x + self.beta * self.ffn(x)
         return x
 
     def reset_parameters(self):
