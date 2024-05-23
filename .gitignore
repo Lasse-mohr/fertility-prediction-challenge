@@ -10,4 +10,4 @@ data_processing/encoding/column_encoding_test.py
 /data
 data_processing/encoding/tcol2vec.ipynb
 data_processing/encoding/explore.ipynb
-environment_lasse.yml
+pipeline_test.py

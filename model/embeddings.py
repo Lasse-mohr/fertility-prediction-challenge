@@ -23,6 +23,6 @@ class SurveyEmbeddings(torch.nn.Module):
         answer = self.answer_embedding(answer)
         year = self.yearly_embedding(year)
         embeddings = answer + self.alpha * year.unsqueeze(1)
-        if hasattr(self, 'question_embedding'):
+        if False: #hasattr(self, 'question_embedding'):
             embeddings += self.question_embedding(self.question_range)
         return embeddings

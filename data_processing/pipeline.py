@@ -13,6 +13,15 @@ def encoding_pipeline(data, codebook=None, use_codebook=True, custom_pairs=None,
     categorical_column_filepath = save_inter_path + 'categorical_columns.csv'
     quantile_column_filepath = save_inter_path + 'quantile_columns.csv'
 
+    if not use_codebook:
+        if not isfile(categorical_column_filepath) or not isfile(quantile_column_filepath):
+            print(
+                f'Files with column names not found at: {categorical_column_filepath}')
+            print('Calculating columns with encoding_pipeline')
+            use_codebook = True
+        else:
+            categorical_columns = pd.read_csv(categorical_column_filepath)
+
     if use_codebook:
         # Select only questions with yearly component
         codebook = codebook[codebook.year.notna()]
@@ -34,21 +43,6 @@ def encoding_pipeline(data, codebook=None, use_codebook=True, custom_pairs=None,
         categorical_columns.to_csv(categorical_column_filepath, index=False)
         quantile_columns.to_csv(quantile_column_filepath, index=False)
 
-    else:
-        if isfile(categorical_column_filepath):
-            categorical_columns = pd.read_csv(categorical_column_filepath)
-        else:
-            print(
-                f'File with categorical column names not found at: {categorical_column_filepath}')
-            print('Call encoding_pipeline with use_codebook=True to create file')
-
-        if isfile(quantile_column_filepath):
-            quantile_columns = pd.read_csv(quantile_column_filepath)
-        else:
-            print(
-                f'File with quantile column names not found at: {quantile_column_filepath}')
-            print('Call encoding_pipeline with use_codebook=True to create file')
-
     # Encode categorical columns
     categorical_transformer = CategoricalTransformer()
     categorical_transformer.fit(codebook, use_codebook=use_codebook)
@@ -62,6 +56,7 @@ def encoding_pipeline(data, codebook=None, use_codebook=True, custom_pairs=None,
     data = quantile_transformer.transform(data)
 
     # Encode text columns (SKIPPED)
+    print('check')
 
     # Fill any nans
     data = data.fillna(101)
@@ -74,3 +69,5 @@ def encoding_pipeline(data, codebook=None, use_codebook=True, custom_pairs=None,
                              custom_pairs=custom_pairs, save_inter_path=save_inter_path)
 
     return sequences
+
+

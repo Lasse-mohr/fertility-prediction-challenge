@@ -1,6 +1,7 @@
 from ast import literal_eval
 from os.path import isdir
 from os import makedirs
+import json
 import re
 import pandas as pd
 import itertools
@@ -11,7 +12,8 @@ class CategoricalTransformer(BaseEstimator, TransformerMixin):
     def fit(self, codebook, use_codebook=True,
             save_inter_path='data/codebook_false/CategoricalTransformer/'):
 
-        core_cat_path = save_inter_path + 'core_cat.csv'
+        converter_path= save_inter_path + 'converter.json'
+        vocab_path = save_inter_path + 'vocab.json'
 
         if use_codebook:
             # Get categorical core questions
@@ -24,75 +26,79 @@ class CategoricalTransformer(BaseEstimator, TransformerMixin):
             core_cat_df['labels_cat'] = core_cat_df['labels_cat'].str.split(
                 "; ").apply(lambda x: [e.strip() for e in x])
 
+            # Init vars
+            vocab = {'UNK': 101}  # We reserve the first 101 for quantiles
+            vocab_max = 102  # (102)
+            single_labels = []
+
+            # Group by question_number (first two and last three characters of var_name)
+            for question_key, group in core_cat_df.groupby(lambda x: self.get_question_number(core_cat_df['var_name'][x]), sort=False):
+                # Get all unique value-label pairs
+                pairs = self.get_unique_value_label_pairs(group)
+                # Sort by value (needed for itertools.groupby)
+                pairs = sorted(pairs, key=lambda x: x[0])
+
+                # Iterate over pairs
+                for _, subgroup in itertools.groupby(pairs, key=lambda x: x[0]):
+                    labels = [label for _, label in subgroup]
+                    # We encode single labels last
+                    if len(labels) <= 1:
+                        single_labels.append(labels[0])
+                        continue
+                    elif len(labels) >= 2:  # When labels changed for a question
+                        # Check if it's rephrasing of the same label
+                        if self.is_same_label(question_key, labels):
+                            # Check for exisiting labels in vocab
+                            present_labels = [
+                                label for label in labels if label in vocab]
+                            # If present, use it, else create new token
+                            if len(present_labels) > 0:
+                                token_num = vocab[present_labels[0]]
+                            else:
+                                token_num = vocab_max
+                                vocab_max += 1
+                            # Add all labels to vocab
+                            for label in labels:
+                                if label not in vocab:
+                                    vocab[label] = token_num
+                        else:  # If labels are not the same, add them to vocab as new tokens
+                            for label in labels:
+                                if label not in vocab:
+                                    vocab[label] = vocab_max
+                                    vocab_max += 1
+
+            # Lastly we add single labels to vocab
+            for label in single_labels:
+                if label not in vocab:
+                    vocab[label] = vocab_max
+                    vocab_max += 1
+
+            # We then create the tokenizer (converter)
+            self.converter = {
+                row['var_name']: {value: vocab[label] for value,
+                                  label in zip(row['values_cat'], row['labels_cat'])}
+                for _, row in core_cat_df.iterrows()
+            }
+
+            self.vocab = vocab
+
             if not isdir(save_inter_path):
                 makedirs(save_inter_path)
 
-            core_cat_df[['values_cat', 'labels_cat',
-                         'var_name']].to_csv(core_cat_path)
+            with open(converter_path, 'w') as file:
+                json.dump(self.converter, file)
+
+            with open(vocab_path, 'w') as file:
+                json.dump(self.vocab, file)
 
         else:
-            core_cat_df = pd.read_csv(core_cat_path, index_col=0)
-            # reads as strings, change back to lists of integers or list of strings
-            core_cat_df['values_cat'] = core_cat_df['values_cat'].apply(
-                self.list_string_to_int_list)
-            core_cat_df['labels_cat'] = core_cat_df['labels_cat'].apply(
-                literal_eval)
 
-        # Init vars
-        vocab = {'UNK': 101}  # We reserve the first 101 for quantiles
-        vocab_max = 102  # (102)
-        single_labels = []
+            with open(converter_path, 'r') as file:
+                self.converter = json.load(file)
 
-        # Group by question_number (first two and last three characters of var_name)
-        for question_key, group in core_cat_df.groupby(lambda x: self.get_question_number(core_cat_df['var_name'][x]), sort=False):
-            # Get all unique value-label pairs
-            pairs = self.get_unique_value_label_pairs(group)
-            # Sort by value (needed for itertools.groupby)
-            pairs = sorted(pairs, key=lambda x: x[0])
+            with open(vocab_path, 'r') as file:
+                self.vocab = json.load(file)
 
-            # Iterate over pairs
-            for _, subgroup in itertools.groupby(pairs, key=lambda x: x[0]):
-                labels = [label for _, label in subgroup]
-                # We encode single labels last
-                if len(labels) <= 1:
-                    single_labels.append(labels[0])
-                    continue
-                elif len(labels) >= 2:  # When labels changed for a question
-                    # Check if it's rephrasing of the same label
-                    if self.is_same_label(question_key, labels):
-                        # Check for exisiting labels in vocab
-                        present_labels = [
-                            label for label in labels if label in vocab]
-                        # If present, use it, else create new token
-                        if len(present_labels) > 0:
-                            token_num = vocab[present_labels[0]]
-                        else:
-                            token_num = vocab_max
-                            vocab_max += 1
-                        # Add all labels to vocab
-                        for label in labels:
-                            if label not in vocab:
-                                vocab[label] = token_num
-                    else:  # If labels are not the same, add them to vocab as new tokens
-                        for label in labels:
-                            if label not in vocab:
-                                vocab[label] = vocab_max
-                                vocab_max += 1
-
-        # Lastly we add single labels to vocab
-        for label in single_labels:
-            if label not in vocab:
-                vocab[label] = vocab_max
-                vocab_max += 1
-
-        # We then create the tokenizer (converter)
-        self.converter = {
-            row['var_name']: {value: vocab[label] for value,
-                              label in zip(row['values_cat'], row['labels_cat'])}
-            for _, row in core_cat_df.iterrows()
-        }
-
-        self.vocab = vocab
 
     def list_string_to_int_list(self, str):
         """ Used for converting from list like "['1', '2', '3']" to list like [1,2,3]
