@@ -10,7 +10,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 class CategoricalTransformer(BaseEstimator, TransformerMixin):
     def fit(self, codebook, use_codebook=True,
-            save_inter_path='data/codebook_false/CategoricalTransformer/'):
+            save_inter_path='data_processing/codebook_false/CategoricalTransformer/'):
 
         converter_path= save_inter_path + 'converter.json'
         vocab_path = save_inter_path + 'vocab.json'

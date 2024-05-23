@@ -7,20 +7,22 @@ from data_processing.sequences.sequencing import to_sequences, get_generic_name
 
 
 def encoding_pipeline(data, codebook=None, use_codebook=True, custom_pairs=None,
-                      save_inter_path='data/codebook_false/encoding_pipeline/',
+                      save_inter_path='data_processing/codebook_false/encoding_pipeline/',
                       ):
+
+    data = data.copy()
 
     categorical_column_filepath = save_inter_path + 'categorical_columns.csv'
     quantile_column_filepath = save_inter_path + 'quantile_columns.csv'
 
     if not use_codebook:
-        if not isfile(categorical_column_filepath) or not isfile(quantile_column_filepath):
-            print(
-                f'Files with column names not found at: {categorical_column_filepath}')
+        if isfile(categorical_column_filepath) or not isfile(quantile_column_filepath):
+            categorical_columns = pd.read_csv(categorical_column_filepath).squeeze()
+            quantile_columns = pd.read_csv(quantile_column_filepath).squeeze()
+        else:
+            print(f'Files with column names not found at: {categorical_column_filepath}')
             print('Calculating columns with encoding_pipeline')
             use_codebook = True
-        else:
-            categorical_columns = pd.read_csv(categorical_column_filepath)
 
     if use_codebook:
         # Select only questions with yearly component
@@ -55,9 +57,6 @@ def encoding_pipeline(data, codebook=None, use_codebook=True, custom_pairs=None,
     quantile_transformer.fit(data)
     data = quantile_transformer.transform(data)
 
-    # Encode text columns (SKIPPED)
-    print('check')
-
     # Fill any nans
     data = data.fillna(101)
     data = data.astype(int, errors='ignore')
@@ -66,7 +65,7 @@ def encoding_pipeline(data, codebook=None, use_codebook=True, custom_pairs=None,
 
     # Convert to sequences
     sequences = to_sequences(data, codebook, use_codebook=use_codebook,
-                             custom_pairs=custom_pairs, save_inter_path=save_inter_path)
+                             custom_pairs=custom_pairs)
 
     return sequences
 

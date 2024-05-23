@@ -6,9 +6,8 @@ import pandas as pd
 
 PID_col = 'nomem_encr'
 
-
 def to_sequences(df, codebook, use_codebook=True, custom_pairs=None,
-                 save_inter_path='data/codebook_false/to_sequences/'):
+                 save_inter_path='data_processing/codebook_false/to_sequences/'):
     """
         Arguments:
             use_codebook (bool): determines if the codebook is used to group columns
@@ -45,23 +44,23 @@ def to_sequences(df, codebook, use_codebook=True, custom_pairs=None,
         pairs = pd.Series(codebook['pairs'].unique())
         pairs.to_csv(generic_name_path, index=False)
 
-    #  Read from files which columns correspond to the same question
     else:
+        #  Read from files which columns correspond to the same question
+
+        if not isdir(save_inter_path):
+            makedirs(save_inter_path)
 
         if isfile(generic_name_path):
-            pairs = pd.read_csv(generic_name_path)
-
+            pairs = pd.read_csv(generic_name_path).squeeze()
         else:
             print(f'File with pair names not found at: {generic_name_path}')
             print('Call to_sequence with use_codebook=True to create file')
 
-        if isdir(var_name_index_path):
+        if isfile(var_name_index_path):
             with open(var_name_index_path, 'r') as file:
                 var_name_index = json.load(file)
         else:
-            print(
-                f'File with variable indices not found at: {var_name_index_path}'
-                )
+            print(f'File with variable indices not found at: {var_name_index_path}')
             print('Call to_sequences with use_codebook=True to create file')
 
     pids = df[PID_col]
