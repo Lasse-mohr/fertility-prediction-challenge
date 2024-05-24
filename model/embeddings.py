@@ -6,7 +6,8 @@ class SurveyEmbeddings(nn.Module):
     def __init__(self, vocab_size: int,
                  n_questions: int = None,
                  n_years: int = 14,
-                 embedding_dim: int = 16):
+                 embedding_dim: int = 16,
+                 dropout: float = None):
         super().__init__()
         # Vocab size is number of unique answers
         self.answer_embedding = nn.Embedding(
@@ -22,9 +23,6 @@ class SurveyEmbeddings(nn.Module):
         else:
             self.question_embedding = None
 
-        if self.question_embedding is not None:
-            print("Embedding Layer with Question Embdeddings")
-
         self.register_parameter("alpha", nn.Parameter(
             torch.tensor([0.0]), requires_grad=True))
         self.register_parameter("beta", nn.Parameter(
@@ -32,10 +30,19 @@ class SurveyEmbeddings(nn.Module):
 
         self.reset_parameters()
 
+        if dropout is not None:
+            raise NotImplementedError()
+
     def reset_parameters(self):
-        nn.init.xavier_uniform_(self.answer_embedding.weight)
-        nn.init.xavier_uniform_(self.yearly_embedding.weight)
+        nn.init.uniform_(self.answer_embedding.weight, a=-0.1, b=0.1)
+        nn.init.uniform_(self.yearly_embedding.weight, a=-0.1, b=0.1)
         nn.init.orthogonal(self.question_embedding.weight)
+
+    def return_status(self):
+        if self.question_embedding is not None:
+            print("Embedding Layer with Question Embdeddings")
+        if self.dropout is not None:
+            print("Embedding Layer with the Dropout")
 
     def forward(self, year, answer):
         answer = self.answer_embedding(answer)
