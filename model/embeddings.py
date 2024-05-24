@@ -33,8 +33,8 @@ class SurveyEmbeddings(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        nn.init.uniform_(self.answer_embedding.weight, a=-0.5, b=0.5)
-        nn.init.uniform_(self.yearly_embedding.weight, a=-0.1, b=0.1)
+        nn.init.xavier_uniform_(self.answer_embedding.weight)
+        nn.init.xavier_uniform_(self.yearly_embedding.weight)
         nn.init.orthogonal(self.question_embedding.weight)
 
     def forward(self, year, answer):
@@ -42,6 +42,6 @@ class SurveyEmbeddings(nn.Module):
         year = self.yearly_embedding(year)
         embeddings = answer + self.alpha * year.unsqueeze(1)
         if self.question_embedding is not None:
-            embeddings = embeddings + self.beta * \
+            embeddings = embeddings + self.beta *\
                 self.question_embedding(self.question_range)
         return embeddings

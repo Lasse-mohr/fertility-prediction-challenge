@@ -126,22 +126,22 @@ class TabularEncoder(nn.Module):
                     CustomTabTransformerConv(channels=embedding_size,
                                              num_heads=num_heads,
                                              attn_dropout=dropout,
-                                             auim_dropout=dropout),
+                                             auim_dropout=dropout,
+                                             residual_dropout=0.1),
+                    nn.Dropout(dropout),
                     nn.Mish(),
                     nn.InstanceNorm1d(sequence_len))
                 for _ in range(num_layers)])
 
         self.decoder = nn.Sequential(
             nn.Dropout(dropout),
-            nn.Linear(embedding_size, embedding_size),
-            nn.Mish(),
-            nn.LayerNorm(embedding_size),
-            nn.Linear(embedding_size, decoder_output)
+            nn.Linear(embedding_size, decoder_output),
         )
         # this layer just aggregates the representation of column into one embedding
         self.flatten = ExcelFormerDecoder(in_channels=embedding_size,
                                           out_channels=output_size,
                                           num_cols=self.num_cols)
+        self.flatten.activation = nn.Mish()
 
     def forward(self, year, seq):
         """

@@ -19,7 +19,7 @@ class CustomTabTransformerConv(TableConv):
         aium_dropout (float): attention module dropout (default: :obj:`0.`)
     """
 
-    def __init__(self, channels: int, num_heads: int, attn_dropout: float = 0.,
+    def __init__(self, channels: int, num_heads: int, residual_dropout: float = 0.2, attn_dropout: float = 0.,
                  auim_dropout: float = 0.):
         super().__init__()
         self.norm_1 = nn.LayerNorm(channels)
@@ -32,11 +32,14 @@ class CustomTabTransformerConv(TableConv):
         self.register_parameter("beta", nn.Parameter(
             torch.tensor([0.0]), requires_grad=True))
 
+        self.rd_1 = nn.Dropout(residual_dropout)
+        self.rd_2 = nn.Dropout(residual_dropout)
+
     def forward(self, x: Tensor) -> Tensor:
         x = self.norm_1(x)
         out = self.attn(x)
-        x = x + self.alpha * out
-        x = x + self.beta * self.ffn(x)
+        x = x + self.alpha * self.rd_1(out)
+        x = x + self.beta * self.rd_2(self.ffn(x))
         return x
 
     def reset_parameters(self):
