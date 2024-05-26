@@ -1,4 +1,5 @@
 import torch
+import random
 
 
 def get_device():
@@ -56,6 +57,39 @@ def generate_predictions(seq, vocab_size: int, p: float = 0.2, missing_token_id:
     targets = _targets.view(targets.shape)
     seq = _seq.view(seq.shape)
     return seq, targets
+
+
+def generate_contrastive_task(x: torch.Tensor, swap_probability: float = 0.5):
+    """
+    Augment the x matrix by randomly swipping some rows (for contrastive task)
+    Returns the augmented data, where targets are 
+        1 if the row was not swapped
+        -1 if the row was swapped
+
+
+    Parameters:
+    x (torch.Tensor): The input data tensor.
+    swap_probability (float): The probability of swapping each row. Default is 0.5.
+
+    Returns:
+    x (torch.Tensor): The data tensor after swapping.
+    targets (torch.Tensor): The target tensor indicating whether a row was swapped (-1) or not (1).
+    """
+    batch_size = x.size(0)
+    targets = torch.ones(batch_size).to(
+        x.device)  # Initialize targets with ones
+
+    for i in range(batch_size):
+        if random.random() < swap_probability:
+            swap_idx = random.randint(0, batch_size - 1)
+            if swap_idx != i:
+                # Swap the rows in the original data
+                x[i], x[swap_idx] = x[swap_idx], x[i]
+                # Set the target to -1 for swapped rows
+                targets[i] = -1
+                targets[swap_idx] = -1
+
+    return x, targets
 
 
 def _generate_predictions(seq, vocab_size: int, p: float = 0.2, pm: float = 0.05, missing_token_id: int = 101):

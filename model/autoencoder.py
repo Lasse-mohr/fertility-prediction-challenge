@@ -85,6 +85,7 @@ class TabularEncoder(nn.Module):
                  num_layers: int = 3,
                  num_heads: int = 4,
                  dropout: float = 0.1,
+                 dropout_embedding: float = 0.1,
                  decoder_output: int = 1,
                  layer_type: str = "attn") -> None:
         """
@@ -95,8 +96,9 @@ class TabularEncoder(nn.Module):
         assert layer_type in ["excel", "attn", "mixture"], "Wrong layer type"
         self.num_cols = sequence_len
         self.embedding = SurveyEmbeddings(
-            vocab_size=vocab_size, n_questions=self.num_cols, n_years=14, embedding_dim=embedding_size)
+            vocab_size=vocab_size, n_questions=self.num_cols, n_years=14, embedding_dim=embedding_size, dropout=dropout_embedding)
 
+        self.embedding_norm = nn.InstanceNorm1d(sequence_len)
         if layer_type == "attn":
             self.encoders = nn.ModuleList([
                 nn.Sequential(
@@ -141,6 +143,8 @@ class TabularEncoder(nn.Module):
         self.flatten = ExcelFormerDecoder(in_channels=embedding_size,
                                           out_channels=output_size,
                                           num_cols=self.num_cols)
+
+        self.reset_parameters()
         self.flatten.activation = nn.Mish()
 
     def forward(self, year, seq):
@@ -149,10 +153,16 @@ class TabularEncoder(nn.Module):
         """
         assert seq.size(1) == self.num_cols, "Wrong shapes"
         x = self.embedding(year, seq)
+        x = self.embedding_norm(x)
         for encoder in self.encoders:
             x = encoder(x)
-        x = self.decoder(x)
-        return x
+        out = self.decoder(x)
+        x_cls = self.flatten(x)
+        return out, x_cls, x
+
+    def reset_parameters(self):
+        self.flatten.reset_parameters()
+        nn.init.xavier_uniform_(self.decoder[1].weight)
 
     def get_embedding(self, year, seq):
         """
