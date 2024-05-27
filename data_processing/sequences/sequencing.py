@@ -7,7 +7,7 @@ import pandas as pd
 PID_col = 'nomem_encr'
 
 def to_sequences(df, codebook, use_codebook=True, custom_pairs=None,
-                 save_inter_path='data_processing/codebook_false/to_sequences/'):
+                 save_inter_path='data_processing/codebook_false/to_sequences/', importance: pd.DataFrame = None):
     """
         Arguments:
             use_codebook (bool): determines if the codebook is used to group columns
@@ -29,6 +29,10 @@ def to_sequences(df, codebook, use_codebook=True, custom_pairs=None,
 
         if custom_pairs is not None:
             codebook = codebook[codebook["pairs"].isin(custom_pairs)]
+        if importance is not None:
+            importance_dict = importance.set_index('feature')['importance'].to_dict()
+            codebook['importance'] = codebook['var_name'].apply(lambda x: importance_dict.get(x, 0))
+            codebook = codebook.sort_values("importance", ascending=False)
 
         var_name_index = {}
         for i, (_, x) in enumerate(codebook.groupby("pairs", sort=False)):
