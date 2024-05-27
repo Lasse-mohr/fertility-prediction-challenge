@@ -73,14 +73,14 @@ class GRUDecoder(nn.Module):
         )
 
         if with_attention:
-            self.aggregation = AggAttention(hidden_size=self.hidden_size)
+            self.aggregation = AggAttention(hidden_size=self.post_gru_size)
         else:
             self.aggregation = self.mean
 
         # Output Layer
-        self.norm_out = nn.LayerNorm(self.hidden_size)
+        self.norm_out = nn.LayerNorm(self.post_gru_size)
         self.decoder = nn.Linear(
-            self.hidden_size, self.output_size, bias=False)
+            self.post_gru_size, self.output_size, bias=False)
 
         if xavier_initialization:
             self.init_parameters()
