@@ -47,6 +47,14 @@ Our main model, the autoencoder-tabular model, is designed to uncover complex, n
 1. Capture latent representations of the data.
 2. Improve predictive performance by learning from the entire dataset structure.
 
+## AutoEncoder
+In addition to the other models, which we have submitted, we have been experimenting with an AutoEncoder. The AutoEncoder is pretrained and finetuned in the following ways:
+
+### Pretraining and finetuning
+The AutoEncoder is pretrained using standard reconstruction loss, where we use an **encoder** to compress the input and a **decoder** to decompress the compressed input and train the model to reconstruct the input. This is done using `CrossEntropyLoss` using the original input and the reconstructed input. 
+
+For finetuning, we drop the decoder and work only with the encoded (compressed) input. Since we have 14 sequences per person, one for each year in the survey (detailed in Data Processing), we encode each sequence into a single vector, representing a highly compression representation of a survey. We then treat the 14 sequences, now compressed as as 14 vectors, as a new temporal sequence which is fed into a GRU.  
+
 ## Data Processing
 
 We do a series of data processing steps to convert the tabular data into sequential data, to represent the temporal aspect of the surveys. We create a sequence for each year and tokenize each sequence. We decided to work only with categorical, numeric and date columns, as they are easy to process and represent most of the data. There also exists a file to handle free-text in `data_processing/text2vec`, but this requires an external model (LLM) to create the embeddings, which is why we have chosen not to include it. ß
