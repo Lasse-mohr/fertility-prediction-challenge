@@ -1,52 +1,52 @@
 # Social Complexity Lab
 
 We proceed in two steps:
-1. we trained a gradient boosting algorithm (xgboost):
- a. to have a strong baseline 
- b. to evalute the predictive power of each questions
-2. our main model is an autoencoder-tabular blabla:
-a.
-b.
+1. We trained a gradient boosting algorithm (xgboost):
+    a. To establish a strong baseline.
+    b. To evaluate the predictive power of each question.
+2. Our main model is an autoencoder-tabular model:
+    a. To capture complex, non-linear relationships in the data.
+    b. To explore new factors and interactions that traditional gradient boosting models might miss.
 
 ## Gradient Boosting as a Baseline
 
-We use xgboost, the most important parameters for the prediction task are,
-1. ```scale_pos_weight``` to account for the unbalanced outcome
-2. ```reg_lamba``` for L2 regularization to avoid overfitting
+For xgboost, the most important parameters for the prediction task are:
+1. `scale_pos_weight` to account for the unbalanced outcome.
+2. `reg_lambda` for L2 regularization to avoid overfitting.
 
-xgboost need only the top X questions to achieve agood prediction and saturater when we add more features
+xgboost serves as a robust baseline with an `F1-score = 0.71` on the validation set of round 2.
 
-<img src="figures/feature_importance.png" alt="drawing" width="700"/>
+#### What Are the Important Questions?
 
+The most important features/questions are displayed in Fig. 1. The main characteristics of these questions are:
+1. `cf` code, indicating `Family & Household` type of questions.
+2. `2020` most of the important questions are from the last year of the survey.
+
+The most important question is `Within how many years do you hope to have your [first/next] child? (in 2020)`. This question remains significant across different survey years (cf. Fig. 1).
+
+<figure>
+  <img src="figures/feature_importance.png" alt="drawing" width="700"/>
+  <figcaption><b>Fig. 1:</b> Feature importance from xgboost, with error bars representing the standard deviation on the feature importance across 50 runs.</figcaption>
+</figure>
+
+#### How Much Data/How Many Questions Do We Need?
+
+xgboost requires only the top ~200 questions to achieve good predictive performance. Performance plateaus and may even decline when additional features are included (Fig. 2).
+
+<figure>
+  <img src="figures/scores.png" alt="drawing" width="700"/>
+  <figcaption><b>Fig. 2:</b> Prediction metrics for an increasing number of features, ordered by feature importance (cf. Fig. 1). Each run is cross-validated over 50 80/20 train/test random splits.</figcaption>
+</figure>
+
+To mitigate overfitting, we employ cross-validation with an 80/20 split. Fig. 3 shows the distribution of `F1-score`. The mean is around 0.75, which is higher than the 0.71 on the validation set, indicating that the model still overfits despite the heavy regularization parameters.
 <img src="figures/f1_score_distribution.png" alt="drawing" width="700"/>
 
 ## TabularEncoder
 
-
-
+Our main model, the autoencoder-tabular model, is designed to uncover complex, non-linear interactions between variables that traditional models might overlook. This approach allows us to:
+1. Capture latent representations of the data.
+2. Improve predictive performance by learning from the entire dataset structure.
 
 ## Data Processing
-### Embedding and tokenisation
-In order for the deep learning models to understand the data, we must embed it. This requires us to put an integer value to all questions and answers. 
 
-For questions, it is easy: We just group questions asked in multiple surveys and assign each group an integer. 
-
-For the answers, we do this through **tokenisation**, where we convert each answer to a `token`.   
-For **categorical** (`data_processing/categorical.py`) answers, we assign each unique answer (accounting for the rephrasing) an integer. This creates the same mapping for an answer (e.g. "yes") that answers two different questions. This allows us to share the vocabulary, decreasing model size and increasing the semantic meaning of each answer.   
-For **numeric** or **date or time** (`data_processing/numeric_and_date.py`) we bin the values into percentiles (100 bins), that is again shared between questions to increase the semantic meaning. 
-
-If an individual has not answered a given question, we assign their answer to an unknown token `[UNK]`. 
-
-### Sequential input
-As our models require sequential data (so they better fit registry data in phase 2), we must convert the tabular format into sequences. We create a sequence for each year to reflect the temporal aspect of the data. The order of the sequence for each year is kept constant across years, as we have no predefined order. This is done using the `codebook`, where we allocate each question (e.g. cfxxx003) a specific spot in the sequence. This means the question "Gender respondent" will always be at the same index of the sequence across all years. For registry data, the sequence would be ordered in the order in which they appear throughout an individual's life.  
-
-If a question has not been asked for a given year, we still keep its spot in the sequence and assign an unknown token `[UNK]` as the answer for all individuals. 
-
-For the ExcelFormer, we order the sequence based on the feature importance from the XGBoost.
-
-We also allow for subsetting the number of columns through the `custom_pairs` in `data_processing/pipeline.py`. 
-
-
-
-
-
+Mikkel data processing. 
