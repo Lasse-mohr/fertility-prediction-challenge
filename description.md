@@ -26,6 +26,8 @@ xgboost need only the top X questions to achieve agood prediction and saturater 
 
 
 ## Data Processing
+We do a series of data processing steps to convert the tabular data into sequential data, to represent the temporal aspect of the surveys. We create a sequence for each year and tokenize each sequence. We decided to work only with categorical, numeric and date columns, as they are easy to process and represent most of the data. There also exists a file to handle free-text in `data_processing/text2vec`, but this requires an external model (LLM) to create the embeddings, which is why we have chosen not to include it. ß
+
 ### Embedding and tokenisation
 In order for the deep learning models to understand the data, we must embed it. This requires us to put an integer value to all questions and answers. 
 
