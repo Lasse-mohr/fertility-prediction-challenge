@@ -1,12 +1,12 @@
 # Social Complexity Lab, PreFer Challenge [1]
 
 We proceed in two steps:
-1. We trained a gradient boosting algorithm (xgboost):
-    a. To establish a strong baseline.
-    b. To evaluate the predictive power of each question.
-2. Our main model is an autoencoder-tabular model:
-    a. To capture complex, non-linear relationships in the data.
-    b. To explore new factors and interactions that traditional gradient boosting models might miss.
+1. **Gradient boosting algorithm (xgboost):**
+    - To establish a strong baseline.
+    - To evaluate the predictive power of each question.
+2. **Our main model is an autoencoder-tabular model:**
+    - To capture complex, non-linear relationships in the data.
+    - To explore new factors and interactions that traditional gradient boosting models might miss.
 
 ## Gradient Boosting as a Baseline
 
