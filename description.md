@@ -4,7 +4,9 @@ We proceed in two steps:
 1. **Gradient boosting algorithm (xgboost):**
     - To establish a strong baseline.
     - To evaluate the predictive power of each question.
-2. **Our main model is an autoencoder-tabular model:**
+2. **Our best performing model is the ExcelFormer:**
+    - Info about it here
+3. **Our main work has been on an autoencoder model:**
     - To capture complex, non-linear relationships in the data.
     - To explore new factors and interactions that traditional gradient boosting models might miss.
 
@@ -41,14 +43,13 @@ xgboost requires only the top ~200 questions to achieve the best predictive perf
 To mitigate overfitting, we employ cross-validation with an 80/20 split. Fig. 3 shows the distribution of `F1-score`. The mean is around 0.75, which is higher than the 0.71 on the validation set, indicating that the model still overfits despite the heavy regularization parameters.
 <img src="figures/f1_score_distribution.png" alt="drawing" width="700"/>
 
-## TabularEncoder
+## AutoEncoder
 
-Our main model, the autoencoder-tabular model, is designed to uncover complex, non-linear interactions between variables that traditional models might overlook. This approach allows us to:
+The AutoEncoder is designed to uncover complex, non-linear interactions between variables that traditional models might overlook. This approach allows us to:
 1. Capture latent representations of the data.
 2. Improve predictive performance by learning from the entire dataset structure.
 
-## AutoEncoder
-In addition to the other models, which we have submitted, we have been experimenting with an AutoEncoder. The AutoEncoder is pretrained and finetuned in the following ways:
+The AutoEncoder is pretrained and finetuned in the following ways:
 
 ### Pretraining and finetuning
 The AutoEncoder is pretrained using standard reconstruction loss, where we use an **encoder** to compress the input and a **decoder** to decompress the compressed input and train the model to reconstruct the input. This is done using `CrossEntropyLoss` using the original input and the reconstructed input. 
@@ -57,7 +58,7 @@ For finetuning, we drop the decoder and work only with the encoded (compressed) 
 
 ## Data Processing
 
-We do a series of data processing steps to convert the tabular data into sequential data, to represent the temporal aspect of the surveys. We create a sequence for each year and tokenize each sequence. We decided to work only with categorical, numeric and date columns, as they are easy to process and represent most of the data. There also exists a file to handle free-text in `data_processing/text2vec`, but this requires an external model (LLM) to create the embeddings, which is why we have chosen not to include it. ß
+We do a series of data processing steps to convert the tabular data into sequential data, to represent the temporal aspect of the surveys. We create a sequence for each year and tokenize each sequence. We decided to work only with categorical, numeric and date columns, as they are easy to process and represent most of the data. There also exists a file to handle free-text in `data_processing/text2vec`, but this requires an external model (LLM) to create the embeddings, which is why we have chosen not to include it.
 
 ### Embedding and tokenisation
 In order for the deep learning models to understand the data, we must embed it. This requires us to put an integer value to all questions and answers. 
