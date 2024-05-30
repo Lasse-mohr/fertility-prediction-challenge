@@ -80,7 +80,6 @@ class GRUDecoder(nn.Module):
 
         # Output Layer
         self.norm_out = nn.LayerNorm(self.post_gru_size)
-        self.dropout_out = nn.Dropout(p=dropout_out)
         self.decoder = nn.Linear(
             self.post_gru_size, self.output_size, bias=False)
 

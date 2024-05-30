@@ -4,9 +4,10 @@ We proceed in two steps:
 1. **Gradient boosting algorithm (xgboost):**
     - To establish a strong baseline.
     - To evaluate the predictive power of each question.
-2. **Our best performing model is the ExcelFormer:**
-    - Info about it here
-3. **Our main work has been on an autoencoder model:**
+2. **Our best performing model is the ExcelFormer [4] + RNN:**
+    - (*ExcelFormer*) To create deep representation of the (answered) questionnaires
+    - (*Recurrent Neural Network*) To leverage temporal interactions between the questionnaires
+3. **Our main work has been on an AutoEncoder model:**
     - To capture complex, non-linear relationships in the data.
     - To explore new factors and interactions that traditional gradient boosting models might miss.
 
@@ -52,9 +53,65 @@ The AutoEncoder is designed to uncover complex, non-linear interactions between 
 The AutoEncoder is pretrained and finetuned in the following ways:
 
 ### Pretraining and finetuning
-The AutoEncoder is pretrained using standard reconstruction loss, where we use an **encoder** to compress the input and a **decoder** to decompress the compressed input and train the model to reconstruct the input. This is done using `CrossEntropyLoss` using the original input and the reconstructed input. 
+The Auto-Encoder is pretrained using standard reconstruction loss, where we use an **encoder** to compress the input and a **decoder** to decompress the compressed input and train the model to reconstruct the input. This is done using `CrossEntropyLoss` using the original input and the reconstructed input. 
 
 For finetuning, we drop the decoder and work only with the encoded (compressed) input. Since we have 14 sequences per person, one for each year in the survey (detailed in Data Processing), we encode each sequence into a single vector, representing a highly compression representation of a survey. We then treat the 14 sequences, now compressed as as 14 vectors, as a new temporal sequence which is fed into a GRU.  
+
+## Final Model
+
+Our best performing model reuses the idea from the **AutoEncoder** pipeline. 
+Here, we use *ExcelFormer* model [4] to create dense representation of input, i.e. answers to a questionnaire, followed by the RNN model that captures temporal interactions between questionnaires of different years. 
+Finally, we use a simple attention mechanism to aggregate the output of the RNN and create a person-embedding.
+
+We use these person embeddings to make the final predictions.
+
+### ExcelFormer
+The *ExcelFormer* is a transformer-based model designed for the *tabular* data (in our work, we redesign certain aspects of the pipeline):
+
+1. Each column (question) and possible answer (category) are embedded into high dimensional space - we have separate embedding space for answers and columns (see Data Processing for more details),
+2. *ExcelFormer* takes the sequence of the embedded questions-answers (that corresponds to a survey from a specific person $p$ for a specific year $y$) and passes it throught encoder layers.
+3. The *ExcelFormer* is trained directly on the downstream task. 
+
+Prior passing questionnaire-sequence to the model one need to sort the columns based on the importance to the target value (i.e. fertility). 
+We take these importance scores from our experiments with the xgboost model.  
+
+The main reason is the mechanism behind the *ExcelFormer* self-attention: the more important columns are not allowed to incorporate information from the less important columns (while the less important columns can do so). 
+
+For each person $p$, we embed the corresponding surveys $s$ for each year. 
+If person did not answer a survey for a specific year, we assume the embedding of the survey is a $\boldsymbol{0}$ vector. 
+
+### RNN model (with attention mechanism)
+
+A set of embedded surveys $S_p = \{s_0, s_1, s_2, .. s_{13}\}$ of a person $p$ is then passed to a RNN model in a chronological order. RNN returns a contextualized representation of a survey $s$ at a given timepoint - hence RNN still returns a set of surveys.
+
+We aggregate these contextualized representations, $\mathbf{h}_t$, using a simple attention mechanism:
+
+$$
+a_t = \frac{e^{\mathbf{h}_t \cdot \mathbf{c}}}{\sum e^{\mathbf{h}_j \cdot \mathbf{c}}} \\
+$$
+
+Here, $c$ is a learnable context vector. The final person embedding is 
+$$
+\widehat{\mathbf{h}} = \sum a_t \cdot \mathbf{h}_t
+$$
+
+The two-year bidirectional GRU [5] provided the best results. 
+
+### Limited Data
+
+Since we have a limited number of labeled samples, we introduce the *Training with  Exponential Moving Average*: we take the weights of a model after each training epoch and average them based on 
+$$
+W_{t+1}^{\mathrm{EMA}}= 0.99 \cdot W_t^{\mathrm{EMA}}+ 0.01 \cdot W_t^{\text {model }}.
+$$
+
+We start averaging after the 3rd epoch, and the calculations are performed after each batch.
+
+This setting lowers the chance of overfitting and provides better generalisability.
+
+### Performance 
+
+
+
 
 ## Data Processing
 
@@ -86,8 +143,14 @@ We compared a common xgboost model with a more advanced machine learning model, 
 While the advanced model did not perform on par with xgboost in this phase of the challenge, it demonstrated potential for future improvements. This model has the capacity to be extended to richer registry data [3], which will be explored in phase two of the challenge. Its ability to capture complex, non-linear interactions holds promise for uncovering new insights and advancing our understanding of fertility behavior.
 
 
-**References:**
+# References
 
 [1] Sivak, E., Pankowska, P., Mendrik, A., Emery, T., Garcia-Bernardo, J., Hocuk, S., Karpinska, K., Maineri, A., Mulder, J., Nissim, M., & Stulp, G. (2024). Combining the Strengths of Dutch Survey and Register Data in a Data Challenge to Predict Fertility (PreFer) 
+
 [2] Bjerre-Nielsen, A., Kassarnig, V., Lassen, D. D., & Lehmann, S. (2021). Task-specific information outperforms surveillance-style big data in predictive analytics. *PNAS*
+
 [3] Savcisens, G., Eliassi-Rad, T., Hansen, L. K., Mortensen, L. H., Lilleholt, L., Rogers, A., Zettler, I., & Lehmann, S. (2024). Using sequences of life-events to predict human lives. *Nature Computational Science*
+
+[4] Chen, J., Yan, J., Chen, D., Sun, J., & Wu, J. (2023). ExcelFormer: Making Neural Network Excel in Small Tabular Data Prediction. *arXiv preprint*
+
+[5] Chung, J., Gulcehre, C., Cho, K., & Bengio, Y. (2014). Empirical evaluation of gated recurrent neural networks on sequence modeling. *arXiv preprint arXiv*:1412.3555.

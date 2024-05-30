@@ -27,15 +27,15 @@ class SurveyEmbeddings(nn.Module):
         self.reset_parameters()
 
         if dropout is not None:
-            self.drop_year = nn.Dropout(dropout)
-            self.drop_answer = nn.Dropout(dropout)
-            self.drop_question = nn.Dropout(dropout)
+            self.drop_year = nn.Dropout1d(dropout)
+            self.drop_answer = None  # nn.Dropout1d(dropout)
+            self.drop_question = None  # nn.Dropout1d(dropout)
 
         self.return_status()
 
     def reset_parameters(self):
-        nn.init.uniform_(self.answer_embedding.weight, a=-0.1, b=0.1)
-        nn.init.uniform_(self.yearly_embedding.weight, a=-0.1, b=0.1)
+        nn.init.uniform_(self.answer_embedding.weight, a=-0.5, b=0.5)
+        nn.init.uniform_(self.yearly_embedding.weight, a=-0.5, b=0.5)
         nn.init.orthogonal_(self.question_embedding.weight)
 
     def return_status(self):
