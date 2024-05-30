@@ -46,6 +46,7 @@ class GRUDecoder(nn.Module):
                  max_seq_len: int = 10,
                  output_size: int = 1,
                  dropout: float = 0.2,
+                 dropout_out: float = 0.1,
                  bidirectional: bool = True,
                  with_attention: bool = True,
                  xavier_initialization: bool = True) -> None:
@@ -79,6 +80,7 @@ class GRUDecoder(nn.Module):
 
         # Output Layer
         self.norm_out = nn.LayerNorm(self.post_gru_size)
+        self.dropout_out = nn.Dropout(p=dropout_out)
         self.decoder = nn.Linear(
             self.post_gru_size, self.output_size, bias=False)
 

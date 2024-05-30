@@ -168,7 +168,7 @@ class CustomExcelFormer(nn.Module):
                                           n_years=n_years,
                                           dropout=embedding_dropout)
 
-        # self.embedding_norm = nn.InstanceNorm1d(sequence_len, affine=True)
+        self.embedding_norm = nn.InstanceNorm1d(sequence_len, affine=False)
 
         self.excelformer_convs = nn.ModuleList([
             ExcelFormerConv(hidden_size, sequence_len, num_heads, diam_dropout,
