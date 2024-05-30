@@ -146,6 +146,7 @@ class CustomExcelFormer(nn.Module):
         aium_dropout: float = 0.0,
         embedding_dropout: float = 0.0,
         residual_dropout: float = 0.0,
+        layer_dropout: float = 0.1,
         num_classes: int = 0.0,
         mixup: str | None = None,
         beta: float = 0.5,
@@ -167,7 +168,7 @@ class CustomExcelFormer(nn.Module):
                                           n_years=n_years,
                                           dropout=embedding_dropout)
 
-        self.embedding_norm = nn.InstanceNorm1d(sequence_len, affine=False)
+        # self.embedding_norm = nn.InstanceNorm1d(sequence_len, affine=True)
 
         self.excelformer_convs = nn.ModuleList([
             ExcelFormerConv(hidden_size, sequence_len, num_heads, diam_dropout,
@@ -180,6 +181,8 @@ class CustomExcelFormer(nn.Module):
         self.excelformer_decoder.activation = nn.Mish()
         self.mixup = mixup
         self.beta = beta
+        self.sampler = torch.distributions.binomial.Binomial(
+            probs=1 - layer_dropout)
 
     def reset_parameters(self) -> None:
         self.embedding.reset_parameters()
@@ -187,9 +190,7 @@ class CustomExcelFormer(nn.Module):
             excelformer_conv.reset_parameters()
         self.excelformer_decoder.reset_parameters()
 
-    def forward(self, year: Tensor, seq: Tensor,
-                mixup_encoded: bool = False,
-                y: Tensor = None) -> Tensor | tuple[Tensor, Tensor]:
+    def forward(self, year: Tensor, seq: Tensor) -> Tensor | tuple[Tensor, Tensor]:
         r"""Transform :class:`TensorFrame` object into output embeddings. If
         `mixup_encoded` is `True`, it produces the output embeddings
         together with the mixed-up targets in `self.mixup` manner.
@@ -207,22 +208,13 @@ class CustomExcelFormer(nn.Module):
             the mixed-up targets of size [batch_size, num_classes] as well.
         """
         x = self.embedding(year=year, answer=seq)
-        X = self.embedding_norm(x)
-        # FEAT-MIX or HIDDEN-MIX is compatible with `torch.compile`
-        if mixup_encoded:
-            assert y is not None
-            x, y_mixedup = feature_mixup(
-                x,
-                y,
-                num_classes=self.num_classes,
-                beta=self.beta,
-                mixup_type=self.mixup,
-                mi_scores=None,  # getattr(tf, 'mi_scores', None),
-            )
+        # x = self.embedding_norm(x)
+
         for excelformer_conv in self.excelformer_convs:
+            # if self.training and self.sampler.sample() == 0:
+            #    continue
             x = excelformer_conv(x)
+
         out = self.excelformer_decoder(x)
 
-        if mixup_encoded:
-            return out, y_mixedup
         return out, None
