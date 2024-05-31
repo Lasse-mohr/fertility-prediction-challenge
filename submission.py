@@ -28,7 +28,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from model.full_model import PreFerPredictor, DataClass
+from model.submission_utils import PreFerPredictor, DataClass
 import torch
 
 
