@@ -105,15 +105,16 @@ class DataClass:
                  targets_path: str = 'data/training_data/PreFer_train_outcome.csv',
                  codebook_path: str = 'data/codebooks/PreFer_codebook.csv',
                  importance_path: str = 'features_importance_all.csv',
-                 prediction_data_path: str = None) -> None:
+                 to_predict_df: str = None) -> None:
         self.data = pd.read_csv(data_path, low_memory=False)
         self.targets = pd.read_csv(targets_path)
         self.codebook = pd.read_csv(codebook_path)
         self.col_importance = pd.read_csv(importance_path)
-        if prediction_data_path is not None:
-            self.prediction_data = pd.read_csv(prediction_data_path, low_memory=False)
+        if to_predict_df is not None:
+            self.prediction_data = to_predict_df
     def make_sequences(self, n_cols: int, use_codebook: bool = True):
         custom_pairs = self.col_importance.feature.map(lambda x: get_generic_name(x)).unique()[:n_cols]
+        self.custom_pairs = custom_pairs
         self.sequences = encoding_pipeline(self.data, self.codebook, 
                                            custom_pairs=custom_pairs, 
                                            importance=self.col_importance, 
@@ -123,14 +124,26 @@ class DataClass:
         self.seq_len = self.pretrain_dataset.get_seq_len()
         self.vocab_size = self.pretrain_dataset.get_vocab_size()
 
+    
+    def make_prediction_sequences(self):
+        self.prediction_sequences = encoding_pipeline(self.data, self.codebook, 
+                                           custom_pairs=self.custom_pairs, 
+                                           importance=self.col_importance, 
+                                           use_codebook=False)
+
 
     def prepare_prediction(self, batch_size):
         """Create dataloader for the whole finetuning dataset"""
-        ...
-        NEED TO FINISH
-        ...
-        dataset = ...
-        self.prediction_dataset = FinetuningDataset(dataset)
+        self.make_prediction_sequences()
+        dataset = {person_id: (
+                torch.tensor([year-2007 for year, _ in wave_responses.items()]).to(device),
+                torch.tensor([ wave_response for _, wave_response in wave_responses.items()]).to(device)
+                )
+                for person_id, wave_responses in self.prediction_sequences.items()
+                }
+
+   
+        self.prediction_dataset = FinetuningDataset(dataset, targets=None)
         self.prediction_dataloader = DataLoader(self.prediction_dataset, batch_size=batch_size, shuffle=False)
 
 

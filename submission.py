@@ -357,19 +357,20 @@ def predict_outcomes(df, background_df=None, model_path="weights/excel_rnn.pt"):
 
     # Load the model
     #model = joblib.load(model_path)
-    model = PreFerPredictor()
+    model = torch.optim.swa_utils.AveragedModel(PreFerPredictor())
     model.load_state_dict(torch.load(model_path))
+    model.eval()
 
     # DATA
-    data = DataClass(prediction_data_path=,
-                     codebook_path= ,
-                     importance_path= )
+    data = DataClass(to_predict_df = df)
     
     data.make_sequences(n_cols=150)
     data.prepare_prediction(batch_size=16)    
 
     # Generate predictions from model, should be 0 (no child) or 1 (had child)
     predictions = model.predict(data.prediction_dataloader)
+    # Binirize the predictions
+    predictions = predictions > 0.5
 
     # Output file should be DataFrame with two columns, nomem_encr and predictions
     df_predict = pd.DataFrame(
