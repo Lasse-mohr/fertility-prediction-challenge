@@ -84,11 +84,11 @@ class PreFerPredictor(nn.Module):
         out = self.decoder(encodings, mask=mask).flatten()
         return out
 
-    def predict(self, dataloader):
+    def predict(self, dataloader, device):
         preds = []
         for batch in dataloader:
             inputs, labels = batch
-            labels = labels.to(torch.float).to(self.device)
+            labels = labels.to(torch.float).to(device)
             input_year, input_seq = inputs
             ### Model
             output = self.forward(input_year=input_year, input_seq=input_seq, labels=labels)

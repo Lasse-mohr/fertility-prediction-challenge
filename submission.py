@@ -20,6 +20,7 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 import joblib
+from model.utils import get_device
 
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
@@ -357,8 +358,9 @@ def predict_outcomes(df, background_df=None, model_path="weights/excel_rnn.pt"):
 
     # Load the model
     #model = joblib.load(model_path)
+    device = get_device()
     model = torch.optim.swa_utils.AveragedModel(PreFerPredictor())
-    model.load_state_dict(torch.load(model_path))
+    model.load_state_dict(torch.load("weights/excel_rnn.pt", map_location=device))
     model.eval()
 
     # DATA
@@ -368,7 +370,7 @@ def predict_outcomes(df, background_df=None, model_path="weights/excel_rnn.pt"):
     data.prepare_prediction(batch_size=16)    
 
     # Generate predictions from model, should be 0 (no child) or 1 (had child)
-    predictions = model.predict(data.prediction_dataloader)
+    predictions = model.get_submodule("module").predict(data.prediction_dataloader, device)
     # Binirize the predictions
     predictions = predictions > 0.5
 
