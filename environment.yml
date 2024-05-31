@@ -15,6 +15,7 @@ dependencies:
     - pyarrow
     - torch
     - torchvision
+    - pytorch_frame
     - torchaudio
     - tqdm
     - torch_frame

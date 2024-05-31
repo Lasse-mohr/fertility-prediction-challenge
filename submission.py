@@ -331,7 +331,7 @@ def clean_df(df, background_df=None):
     return df_x
 
 
-def predict_outcomes(df, background_df=None, model_path="weights/excel_rnn.pt"):
+def predict_outcomes(df, background_df=None,  model_path="model.joblib", data_processor_path = "data_processor.joblib"):
     """Generate predictions using the saved model and the input dataframe.
 
     The predict_outcomes function accepts a Pandas DataFrame as an argument
@@ -357,22 +357,20 @@ def predict_outcomes(df, background_df=None, model_path="weights/excel_rnn.pt"):
         print("The identifier variable 'nomem_encr' should be in the dataset")
 
     # Load the model
-    #model = joblib.load(model_path)
     device = get_device()
-    model = torch.optim.swa_utils.AveragedModel(PreFerPredictor())
-    model.load_state_dict(torch.load("weights/excel_rnn.pt", map_location=device))
+    model = joblib.load(model_path).to(device)
     model.eval()
 
-    # DATA
-    data = DataClass(to_predict_df = df)
-    
-    data.make_sequences(n_cols=150)
-    data.prepare_prediction(batch_size=16)    
+    # Preprocess the fake / holdout data
+    df = clean_df(df, background_df)
+    data_processor = joblib.load(data_processor_path)
+    data_processor.make_predictions(df = df, batch_size = 16, use_codebook = False)
+
+
 
     # Generate predictions from model, should be 0 (no child) or 1 (had child)
-    predictions = model.get_submodule("module").predict(data.prediction_dataloader, device)
-    # Binirize the predictions
-    predictions = predictions > 0.5
+    predictions = model.predict(data_processor.prediction_dataloader)
+    predictions = (predictions > 0.5).astype(int)
 
     # Output file should be DataFrame with two columns, nomem_encr and predictions
     df_predict = pd.DataFrame(

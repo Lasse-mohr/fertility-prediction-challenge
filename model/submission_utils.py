@@ -54,7 +54,7 @@ class PreFerPredictor(nn.Module):
 
         self.enc_dropout = nn.Dropout(0.1)
         self.enc_dropout1d = nn.Dropout1d(0.1)
-        self.seq_len = sequence_len
+        self.seq_len = 149
 
     def forward(self, input_year, input_seq, labels):
         bs, ss = labels.size(0), 14
@@ -102,14 +102,42 @@ class DataProcessor:
         self.n_cols = n_cols
 
     def convert_to_sequences(self, use_codebook: bool = True):
-        custom_pairs = self.col_importance.feature.map(
+        self.custom_pairs = self.col_importance.feature.map(
             lambda x: get_generic_name(x)).unique()[:self.n_cols]
 
         self.sequences = encoding_pipeline(self.data, self.codebook,
-                                           custom_pairs=custom_pairs,
+                                           custom_pairs=self.custom_pairs,
                                            importance=self.col_importance,
                                            use_codebook=use_codebook)
         self.__preprocessing_pipeline__()
+
+    def make_predictions(self, df: pd.DataFrame, batch_size: int, use_codebook: bool = True):
+        self.prediction_sequences = encoding_pipeline(self.data, self.codebook,
+                                           custom_pairs=self.custom_pairs,
+                                           importance=self.col_importance,
+                                           use_codebook=use_codebook)
+        
+        person_ids = df['nomem_encr'].values
+        data_obj = {person_id: (
+            torch.tensor(
+                [year-2007 for year, _ in wave_responses.items()]).to(device),
+            torch.tensor(
+                [wave_response for _, wave_response in wave_responses.items()]).to(device)
+        )
+            for person_id, wave_responses in self.sequences.items()
+        }
+
+        # split data based on the splits made for the target
+        full_data = {person_id: data_obj[person_id]
+                     for person_id in person_ids}
+
+        self.prediction_dataset = PredictionDataset(full_data)
+        self.prediction_dataloader = DataLoader(
+            self.full_dataset,
+            batch_size=batch_size,
+            shuffle=False)
+
+        
 
     def __preprocessing_pipeline__(self):
         self.pretrain_dataset = PretrainingDataset(self.sequences)
@@ -141,3 +169,4 @@ class DataProcessor:
             self.full_dataset,
             batch_size=batch_size,
             shuffle=True)
+

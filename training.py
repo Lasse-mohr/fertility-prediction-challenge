@@ -7,15 +7,16 @@ but the resulting model model.joblib will be applied to the holdout data.
 It is important to document your training steps here, including seed,
 number of folds, model, et cetera
 """
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
 import pandas as pd
 import joblib
 import submission
 
 from model.utils import get_device
 from model.submission_utils import PreFerPredictor, DataProcessor
-import torch
-import torch.nn as nn
-import torch.optim as optim
 
 
 def train_save_model(cleaned_df, outcome_df):
@@ -76,8 +77,10 @@ def train_save_model(cleaned_df, outcome_df):
                 avg_model.update_parameters(model)
 
     avg_model.eval()
-    # Save the model
+    # Save the averaged model
     joblib.dump(avg_model, "model.joblib")
+    # Save the data processor 
+    joblib.dump(data_processor, "data_processor.joblib")
 
 
 if __name__ == "__main__":
