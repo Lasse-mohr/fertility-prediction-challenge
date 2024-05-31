@@ -119,6 +119,8 @@ Based on our boostrap estimates (on the hold out dataset) the performance on the
   4. Recall: 0.679 [0.545, 0.808]
   5. mean Averape Precision: 0.872 [0.789, 0.937]
 
+After estimating the metric using our data splits, we retrained the model on the full dataset available. 
+
 The full training pipeline is in the `train_finetune.ipynb` notebook. 
 
 ## Data Processing
