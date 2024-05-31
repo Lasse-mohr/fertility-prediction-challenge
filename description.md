@@ -78,6 +78,7 @@ Prior passing questionnaire-sequence to the model one need to sort the columns b
 We take these importance scores from our experiments with the xgboost model.  
 
 The main reason is the mechanism behind the *ExcelFormer* self-attention: the more important columns are not allowed to incorporate information from the less important columns (while the less important columns can do so). 
+We adapterd the implementation presented in the `PyTorch Frame` package [7].
 
 For each person $p$, we embed the corresponding surveys $s$ for each year. 
 If person did not answer a survey for a specific year, we assume the embedding of the survey is a $\boldsymbol{0}$ vector. 
@@ -101,7 +102,7 @@ The two-year bidirectional GRU [5] provided the best results.
 
 ### Limited Data
 
-Since we have a limited number of labeled samples, we introduce the *Training with  Exponential Moving Average*: we take the weights of a model after each training epoch and average them based on 
+Since we have a limited number of labeled samples, we introduce the *Training with  Exponential Moving Average*: we take the weights of a model after each training epoch and average them based on [6]
 $$
 W_{t+1}^{\mathrm{EMA}}= 0.99 \cdot W_t^{\mathrm{EMA}}+ 0.01 \cdot W_t^{\text {model }}.
 $$
@@ -164,3 +165,7 @@ While the advanced model did not perform on par with xgboost in this phase of th
 [4] Chen, J., Yan, J., Chen, D., Sun, J., & Wu, J. (2023). ExcelFormer: Making Neural Network Excel in Small Tabular Data Prediction. *arXiv preprint*
 
 [5] Chung, J., Gulcehre, C., Cho, K., & Bengio, Y. (2014). Empirical evaluation of gated recurrent neural networks on sequence modeling. *arXiv preprint arXiv*:1412.3555.
+
+[6] Izmailov, P., Podoprikhin, D., Garipov, T., Vetrov, D., & Wilson, A. G. (2018). Averaging weights leads to wider optima and better generalization. *arXiv preprint arXiv*:1803.05407.
+
+[7] Hu, W., Yuan, Y., Zhang, Z., Nitta, A., Cao, K., Kocijan, V., ... & Fey, M. (2024). PyTorch Frame: A Modular Framework for Multi-Modal Tabular Learning. *arXiv preprint arXiv*:2404.00776.

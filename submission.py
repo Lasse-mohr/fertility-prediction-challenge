@@ -27,6 +27,9 @@ from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.base import BaseEstimator, TransformerMixin
 
+from model.full_model import PreFerPredictor
+import torch
+
 
 from sklearn.base import BaseEstimator, TransformerMixin
 from dateutil.parser import parse, ParserError
@@ -327,7 +330,7 @@ def clean_df(df, background_df=None):
     return df_x
 
 
-def predict_outcomes(df, background_df=None, model_path="model.joblib"):
+def predict_outcomes(df, background_df=None, model_path="weights/excel_rnn.pt"):
     """Generate predictions using the saved model and the input dataframe.
 
     The predict_outcomes function accepts a Pandas DataFrame as an argument
@@ -353,7 +356,9 @@ def predict_outcomes(df, background_df=None, model_path="model.joblib"):
         print("The identifier variable 'nomem_encr' should be in the dataset")
 
     # Load the model
-    model = joblib.load(model_path)
+    #model = joblib.load(model_path)
+    model = PreFerPredictor()
+    model.load_state_dict(torch.load(model_path))
 
     # Preprocess the fake / holdout data
     df = clean_df(df, background_df)
