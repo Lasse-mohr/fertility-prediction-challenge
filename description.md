@@ -1,6 +1,6 @@
 # Social Complexity Lab, PreFer Challenge [1]
 
-We proceed in two steps:
+We proceed in three steps:
 1. **Gradient boosting algorithm (xgboost):**
     - To establish a strong baseline.
     - To evaluate the predictive power of each question.
@@ -10,6 +10,8 @@ We proceed in two steps:
 3. **Our main work has been on an AutoEncoder model:**
     - To capture complex, non-linear relationships in the data.
     - To explore new factors and interactions that traditional gradient boosting models might miss.
+
+We have decided these steps for a few reasons. First, it is important to establish a solid baseline using traditional methods such as XGBoost. However, XGBoost doesn't scale as well with data, making it an unlikely candidate for phase 2 experiments. This is why we have worked with embedding strategies and AutoEncoders. These approaches allow us to model the data more similar to text (i.e. sequential data), enabling pretraining like seen in fields as NLP and CV. These fields have been revolutionized by self-supervised learning (SSL) and big data. We have proven that social data can be modelled in this way [3], which makes it a promsing path for phase 2.  
 
 ## Gradient Boosting as a Baseline
 
