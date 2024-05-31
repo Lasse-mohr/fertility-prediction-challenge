@@ -27,7 +27,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.base import BaseEstimator, TransformerMixin
 
-from model.full_model import PreFerPredictor
+from model.full_model import PreFerPredictor, DataClass
 import torch
 
 
@@ -360,14 +360,16 @@ def predict_outcomes(df, background_df=None, model_path="weights/excel_rnn.pt"):
     model = PreFerPredictor()
     model.load_state_dict(torch.load(model_path))
 
-    # Preprocess the fake / holdout data
-    df = clean_df(df, background_df)
-
-    # Exclude the variable nomem_encr if this variable is NOT in your model
-    vars_without_id = df.columns[df.columns != 'nomem_encr']
+    # DATA
+    data = DataClass(prediction_data_path=,
+                     codebook_path= ,
+                     importance_path= )
+    
+    data.make_sequences(n_cols=150)
+    data.prepare_prediction(batch_size=16)    
 
     # Generate predictions from model, should be 0 (no child) or 1 (had child)
-    predictions = model.predict(df[vars_without_id])
+    predictions = model.predict(data.prediction_dataloader)
 
     # Output file should be DataFrame with two columns, nomem_encr and predictions
     df_predict = pd.DataFrame(

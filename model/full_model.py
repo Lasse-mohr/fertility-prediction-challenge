@@ -83,3 +83,99 @@ class PreFerPredictor(nn.Module):
         # Forward pass
         out = self.decoder(encodings, mask=mask).flatten()
         return out
+
+    def predict(self, dataloader):
+        preds = []
+        for batch in dataloader:
+            inputs, labels = batch
+            labels = labels.to(torch.float).to(self.device)
+            input_year, input_seq = inputs
+            ### Model
+            output = self.forward(input_year=input_year, input_seq=input_seq, labels=labels)
+            probs = F.sigmoid(output).flatten()
+
+            preds.extend(probs.detach().cpu().numpy().tolist())
+
+        return torch.tensor(preds).flatten().numpy()
+
+
+class DataClass:
+    def __init__(self,
+                 data_path: str = "data/training_data/PreFer_train_data.csv",
+                 targets_path: str = 'data/training_data/PreFer_train_outcome.csv',
+                 codebook_path: str = 'data/codebooks/PreFer_codebook.csv',
+                 importance_path: str = 'features_importance_all.csv',
+                 prediction_data_path: str = None) -> None:
+        self.data = pd.read_csv(data_path, low_memory=False)
+        self.targets = pd.read_csv(targets_path)
+        self.codebook = pd.read_csv(codebook_path)
+        self.col_importance = pd.read_csv(importance_path)
+        if prediction_data_path is not None:
+            self.prediction_data = pd.read_csv(prediction_data_path, low_memory=False)
+    def make_sequences(self, n_cols: int, use_codebook: bool = True):
+        custom_pairs = self.col_importance.feature.map(lambda x: get_generic_name(x)).unique()[:n_cols]
+        self.sequences = encoding_pipeline(self.data, self.codebook, 
+                                           custom_pairs=custom_pairs, 
+                                           importance=self.col_importance, 
+                                           use_codebook=use_codebook)
+    def make_pretraining(self):
+        self.pretrain_dataset = PretrainingDataset(self.sequences)
+        self.seq_len = self.pretrain_dataset.get_seq_len()
+        self.vocab_size = self.pretrain_dataset.get_vocab_size()
+
+
+    def prepare_prediction(self, batch_size):
+        """Create dataloader for the whole finetuning dataset"""
+        ...
+        NEED TO FINISH
+        ...
+        dataset = ...
+        self.prediction_dataset = FinetuningDataset(dataset)
+        self.prediction_dataloader = DataLoader(self.prediction_dataset, batch_size=batch_size, shuffle=False)
+
+
+    def make_full_pretraining(self, batch_size): 
+        """Create dataloader for the whole finetuning dataset"""
+        targets = self.targets[self.targets.new_child.notna()]
+        full_person_ids =  targets['nomem_encr'].values
+        rnn_data = {person_id: (
+                torch.tensor([year-2007 for year, _ in wave_responses.items()]).to(device),
+                torch.tensor([ wave_response for _, wave_response in wave_responses.items()]).to(device)
+                )
+                for person_id, wave_responses in self.sequences.items()
+                }
+
+        # split data based on the splits made for the target
+        full_data = {person_id: rnn_data[person_id] for person_id in full_person_ids}
+        self.full_dataset = FinetuningDataset(full_data, targets = targets)
+        self.full_dataloader = DataLoader(self.full_dataset, batch_size=batch_size, shuffle=True)
+
+
+    def make_finetuning(self, batch_size, test_size: float = 0.2, val_size: float = 0.2):
+        """
+        Create dataloaders for the train/val/test splits.
+        """
+        targets = self.targets[self.targets.new_child.notna()]
+        train_person_ids, test_person_ids = train_test_split(targets['nomem_encr'], test_size=test_size, random_state=42)
+        train_person_ids, val_person_ids = train_test_split(train_person_ids, test_size=val_size, random_state=42)
+        rnn_data = {person_id: (
+                torch.tensor([year-2007 for year, _ in wave_responses.items()]).to(device),
+                torch.tensor([ wave_response for _, wave_response in wave_responses.items()]).to(device)
+                )
+                for person_id, wave_responses in self.sequences.items()
+                }
+
+        # split data based on the splits made for the target
+        train_data = {person_id: rnn_data[person_id] for person_id in train_person_ids}
+        val_data = {person_id: rnn_data[person_id] for person_id in val_person_ids}
+        test_data = {person_id: rnn_data[person_id] for person_id in test_person_ids}
+
+        self.train_dataset = FinetuningDataset(train_data, targets = targets)
+        self.val_dataset = FinetuningDataset(val_data, targets = targets)
+        self.test_dataset = FinetuningDataset(test_data, targets = targets)
+        self.train_dataloader = DataLoader(self.train_dataset, batch_size=batch_size, shuffle=True)
+        self.val_dataloader = DataLoader(self.val_dataset, batch_size=batch_size, shuffle=False)
+        self.test_dataloader  = DataLoader(self.test_dataset,  batch_size=batch_size)
+
+
+
