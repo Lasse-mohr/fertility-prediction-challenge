@@ -366,8 +366,6 @@ def predict_outcomes(df, background_df=None,  model_path="model.joblib", data_pr
     data_processor = joblib.load(data_processor_path)
     data_processor.make_predictions(df = df, batch_size = 16, use_codebook = False)
 
-
-
     # Generate predictions from model, should be 0 (no child) or 1 (had child)
     predictions = model.predict(data_processor.prediction_dataloader)
     predictions = (predictions > 0.5).astype(int)

@@ -7,7 +7,7 @@ dependencies:
   - joblib
   - pip
   - pip:
-    - numpy=1.26.0
+    - numpy==1.26.0
     - pandas
     - scikit-learn
     - xgboost==2.0.3    
