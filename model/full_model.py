@@ -21,7 +21,7 @@ from data_processing.pipeline import encoding_pipeline, get_generic_name
 import matplotlib.pyplot as plt
 from model.utils import get_device
 from model.dataset import PretrainingDataset
-from model.dataset import FinetuningDataset
+from model.dataset import FinetuningDataset, PredictionDataset
 
 
 device = get_device()
@@ -143,7 +143,7 @@ class DataClass:
                 }
 
    
-        self.prediction_dataset = FinetuningDataset(dataset, targets=None)
+        self.prediction_dataset = PredictionDataset(dataset)
         self.prediction_dataloader = DataLoader(self.prediction_dataset, batch_size=batch_size, shuffle=False)
 
 

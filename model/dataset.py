@@ -45,3 +45,20 @@ class FinetuningDataset(Dataset):
         person_id = self.keys[idx]
 
         return self.sequences[person_id], self.targets[person_id]
+    
+
+class PredictionDataset(Dataset):
+    def __init__(self, sequences: dict):
+        """ We expect sequences to be pre-encoded and structered accordingly here"""
+        self.keys = list(sequences.keys())
+
+        self.sequences = sequences
+
+    def __len__(self):
+        return len(self.sequences)
+
+    def __getitem__(self, idx):
+        person_id = self.keys[idx]
+
+        return self.sequences[person_id], -1
+    
