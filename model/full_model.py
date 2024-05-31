@@ -126,7 +126,7 @@ class DataClass:
 
     
     def make_prediction_sequences(self):
-        self.prediction_sequences = encoding_pipeline(self.data, self.codebook, 
+        self.prediction_sequences = encoding_pipeline(self.prediction_data, self.codebook, 
                                            custom_pairs=self.custom_pairs, 
                                            importance=self.col_importance, 
                                            use_codebook=False)
