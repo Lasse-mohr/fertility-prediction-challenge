@@ -11,7 +11,7 @@ class AggAttention(nn.Module):
     def __init__(self, hidden_size: int):
         super(AggAttention, self).__init__()
         z = torch.Tensor(hidden_size)
-        nn.init.uniform_(z, a=-0.1, b=0.1)  # initialize weights uniformly
+        nn.init.constant_(z, 1/hidden_size)  # initialize weights uniformly
         # self.context are the learned attention weights
         self.register_parameter("context", nn.Parameter(z))
         self.act = nn.Softmax(dim=1)

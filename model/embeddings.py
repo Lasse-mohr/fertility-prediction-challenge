@@ -20,7 +20,7 @@ class SurveyEmbeddings(nn.Module):
             "question_range", torch.arange(n_questions))  # )
 
         self.register_parameter("alpha", nn.Parameter(
-            torch.tensor([0.0]), requires_grad=True))
+            torch.tensor([0.01]), requires_grad=True))
         self.register_parameter("beta", nn.Parameter(
             torch.tensor([0.2]), requires_grad=True))
 
@@ -34,9 +34,11 @@ class SurveyEmbeddings(nn.Module):
         self.return_status()
 
     def reset_parameters(self):
-        nn.init.uniform_(self.answer_embedding.weight, a=-0.5, b=0.5)
-        nn.init.uniform_(self.yearly_embedding.weight, a=-0.5, b=0.5)
-        nn.init.orthogonal_(self.question_embedding.weight)
+        # , a=-0.5, b=0.5)
+        nn.init.kaiming_normal_(self.answer_embedding.weight)
+        # , a=-0.5, b=0.5)
+        nn.init.kaiming_normal_(self.yearly_embedding.weight)
+        nn.init.kaiming_normal_(self.question_embedding.weight)
 
     def return_status(self):
         if self.drop_answer is not None:

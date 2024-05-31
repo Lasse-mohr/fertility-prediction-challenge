@@ -112,8 +112,14 @@ This setting lowers the chance of overfitting and provides better generalisabili
 
 ### Performance 
 
+Based on our boostrap estimates (on the hold out dataset) the performance on the real unseen data is (with 95% confidence intervals):
+  1. F1-Score: 0.771 [0.667, 0.861]
+  2. MCC : 0.720 [0.600, 0.828]
+  3. Precision: 0.895 [0.786, 0.976]
+  4. Recall: 0.679 [0.545, 0.808]
+  5. mean Averape Precision: 0.872 [0.789, 0.937]
 
-
+The full training pipeline is in the `train_finetune.ipynb` notebook. 
 
 ## Data Processing
 
