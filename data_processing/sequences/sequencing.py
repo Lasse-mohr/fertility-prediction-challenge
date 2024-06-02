@@ -66,6 +66,7 @@ def to_sequences(df, codebook, use_codebook=True, custom_pairs=None,
     pids = df[PID_col]
     # Create dict of {pid: {year: sequences}}
     N = len(pairs)
+    print(N)
     years = [2007 + year for year in range(14)]
     seq = {pid: {year: [101]*N for year in years}
            for pid in pids}    # 101 is UNK
