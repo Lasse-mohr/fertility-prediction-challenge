@@ -69,8 +69,9 @@ class PreFerPredictor(nn.Module):
         out = self.decoder(encodings, mask=mask).flatten()
         return out
 
-    def predict(self, dataloader, device):
+    def predict(self, dataloader, device: str):
         preds = []
+        print(len(dataloader))
         for batch in dataloader:
             inputs, labels = batch
             labels = labels.to(torch.float).to(device)
@@ -99,6 +100,9 @@ class DataProcessor:
         self.n_cols = n_cols
 
     def convert_to_sequences(self, use_codebook: bool = True):
+        """
+        Converts the training dataframe into sequences (format that can be used by the CustomExcelFormer)
+        """
         self.custom_pairs = self.col_importance.feature.map(
             lambda x: get_generic_name(x)).unique()[:self.n_cols]
 
@@ -115,7 +119,11 @@ class DataProcessor:
         self.__preprocessing_pipeline__()
 
     def make_predictions(self, df: pd.DataFrame, batch_size: int, use_codebook: bool = True):
-        self.prediction_sequences = encoding_pipeline(self.data, self.codebook,
+        """
+        Method takes the dataframe (with unseen data) without any target values,
+        and assembles a 'prediction_dataloader'.
+        """
+        self.prediction_sequences = encoding_pipeline(df, self.codebook,
                                                       custom_pairs=self.custom_pairs,
                                                       importance=self.col_importance,
                                                       use_codebook=use_codebook)
@@ -127,7 +135,7 @@ class DataProcessor:
             torch.tensor(
                 [wave_response for _, wave_response in wave_responses.items()]).to(device)
         )
-            for person_id, wave_responses in self.sequences.items()
+            for person_id, wave_responses in self.prediction_sequences.items()
         }
 
         # split data based on the splits made for the target
@@ -136,11 +144,14 @@ class DataProcessor:
 
         self.prediction_dataset = PredictionDataset(full_data)
         self.prediction_dataloader = DataLoader(
-            self.full_dataset,
+            self.prediction_dataset,
             batch_size=batch_size,
             shuffle=False)
 
     def __preprocessing_pipeline__(self):
+        """
+        Processes the training data to estimate the vocabulary size.
+        """
         self.pretrain_dataset = PretrainingDataset(self.sequences)
         self.seq_len = self.pretrain_dataset.get_seq_len()
         self.vocab_size = self.pretrain_dataset.get_vocab_size()
