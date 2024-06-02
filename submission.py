@@ -319,8 +319,8 @@ def clean_df(df, background_df=None):
     path_for_PreFer_folder = ''
     threshold = 0.4
     #df_x, df_y = with_outcome(df_x_ini, df_y_ini)
-    df_x = make_categorical(df)
-    df_x = quantile_dates_and_numeric(df_x, path_for_PreFer_folder)
+    #df_x = make_categorical(df)
+    df_x = quantile_dates_and_numeric(df, path_for_PreFer_folder)
     df_x = drop_columns(df_x)
     #columms = df_x.columns
     df_x = remove_question_type(df_x)
@@ -359,11 +359,13 @@ def predict_outcomes(df, background_df=None,  model_path="model.joblib", data_pr
     device = get_device()
     model = joblib.load(model_path).to(device)
     model.eval()
+    print("(SUBMISSION) Trained model is loaded!")
 
     # Preprocess the fake / holdout data
     df = clean_df(df, background_df)
     data_processor = joblib.load(data_processor_path)
     data_processor.make_predictions(df = df, batch_size = 16, use_codebook = False)
+    print("(SUBMISSION) Data Processor is done!")
 
     # Generate predictions from model, should be 0 (no child) or 1 (had child)
     predictions = model.predict(data_processor.prediction_dataloader)

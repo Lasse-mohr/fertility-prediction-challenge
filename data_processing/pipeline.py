@@ -61,8 +61,7 @@ def encoding_pipeline(data, codebook=None, use_codebook=True, custom_pairs=None,
     data = quantile_transformer.transform(data)
 
     # Fill any nans
-    data = data.fillna(
-        {col: 101 for col in data.columns[data.dtypes.eq(float)]})
+    data = data.fillna(101)
     data = data.astype(int, errors='ignore')
     # Drop object columns (automatically filled with 101 in to_sequences)
     data = data[data.columns[data.dtypes != 'object']]

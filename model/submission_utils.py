@@ -90,7 +90,7 @@ class DataProcessor:
                  data: pd.DataFrame,
                  outcomes: pd.DataFrame,
                  n_cols: int,
-                 codebook_path: str = 'data/codebooks/PreFer_codebook.csv',
+                 codebook_path: str = 'codebooks/PreFer_codebook.csv',
                  importance_path: str = 'features_importance_all.csv') -> None:
         self.data = data
         self.outcomes = outcomes
