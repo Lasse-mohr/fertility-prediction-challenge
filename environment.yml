@@ -7,17 +7,12 @@ dependencies:
   - joblib
   - pip
   - pip:
-    - numpy=1.26.0
+    - numpy==1.26.0
     - pandas
     - scikit-learn
-    - xgboost==2.0.3    
     - polars
     - pyarrow
     - torch
-    - torchvision
-    - torchaudio
+    - pytorch_frame
     - tqdm
     - torch_frame
-    - jupyterlab
-    - ipykernel
-    - umap-learn

@@ -11,7 +11,7 @@ class AggAttention(nn.Module):
     def __init__(self, hidden_size: int):
         super(AggAttention, self).__init__()
         z = torch.Tensor(hidden_size)
-        nn.init.uniform_(z, a=-0.1, b=0.1)  # initialize weights uniformly
+        nn.init.constant_(z, 1/hidden_size)  # initialize weights uniformly
         # self.context are the learned attention weights
         self.register_parameter("context", nn.Parameter(z))
         self.act = nn.Softmax(dim=1)
@@ -46,6 +46,7 @@ class GRUDecoder(nn.Module):
                  max_seq_len: int = 10,
                  output_size: int = 1,
                  dropout: float = 0.2,
+                 dropout_out: float = 0.1,
                  bidirectional: bool = True,
                  with_attention: bool = True,
                  xavier_initialization: bool = True) -> None:
@@ -73,14 +74,14 @@ class GRUDecoder(nn.Module):
         )
 
         if with_attention:
-            self.aggregation = AggAttention(hidden_size=self.hidden_size)
+            self.aggregation = AggAttention(hidden_size=self.post_gru_size)
         else:
             self.aggregation = self.mean
 
         # Output Layer
-        self.norm_out = nn.LayerNorm(self.hidden_size)
+        self.norm_out = nn.LayerNorm(self.post_gru_size)
         self.decoder = nn.Linear(
-            self.hidden_size, self.output_size, bias=False)
+            self.post_gru_size, self.output_size, bias=False)
 
         if xavier_initialization:
             self.init_parameters()

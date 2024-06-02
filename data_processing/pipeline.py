@@ -8,6 +8,7 @@ from data_processing.sequences.sequencing import to_sequences, get_generic_name
 
 def encoding_pipeline(data, codebook=None, use_codebook=True, custom_pairs=None,
                       save_inter_path='data_processing/codebook_false/encoding_pipeline/',
+                      importance: pd.DataFrame = None
                       ):
 
     data = data.copy()
@@ -65,7 +66,7 @@ def encoding_pipeline(data, codebook=None, use_codebook=True, custom_pairs=None,
 
     # Convert to sequences
     sequences = to_sequences(data, codebook, use_codebook=use_codebook,
-                             custom_pairs=custom_pairs)
+                             custom_pairs=custom_pairs, importance=importance)
 
     return sequences
 

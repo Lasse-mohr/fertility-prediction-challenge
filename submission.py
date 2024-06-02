@@ -20,12 +20,16 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 import joblib
+from model.utils import get_device
 
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.base import BaseEstimator, TransformerMixin
+
+from model.submission_utils import PreFerPredictor, DataClass
+import torch
 
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -327,7 +331,7 @@ def clean_df(df, background_df=None):
     return df_x
 
 
-def predict_outcomes(df, background_df=None, model_path="model.joblib"):
+def predict_outcomes(df, background_df=None,  model_path="model.joblib", data_processor_path = "data_processor.joblib"):
     """Generate predictions using the saved model and the input dataframe.
 
     The predict_outcomes function accepts a Pandas DataFrame as an argument
@@ -353,16 +357,18 @@ def predict_outcomes(df, background_df=None, model_path="model.joblib"):
         print("The identifier variable 'nomem_encr' should be in the dataset")
 
     # Load the model
-    model = joblib.load(model_path)
+    device = get_device()
+    model = joblib.load(model_path).to(device)
+    model.eval()
 
     # Preprocess the fake / holdout data
     df = clean_df(df, background_df)
-
-    # Exclude the variable nomem_encr if this variable is NOT in your model
-    vars_without_id = df.columns[df.columns != 'nomem_encr']
+    data_processor = joblib.load(data_processor_path)
+    data_processor.make_predictions(df = df, batch_size = 16, use_codebook = False)
 
     # Generate predictions from model, should be 0 (no child) or 1 (had child)
-    predictions = model.predict(df[vars_without_id])
+    predictions = model.predict(data_processor.prediction_dataloader)
+    predictions = (predictions > 0.5).astype(int)
 
     # Output file should be DataFrame with two columns, nomem_encr and predictions
     df_predict = pd.DataFrame(

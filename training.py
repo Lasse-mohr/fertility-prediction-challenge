@@ -7,11 +7,17 @@ but the resulting model model.joblib will be applied to the holdout data.
 It is important to document your training steps here, including seed,
 number of folds, model, et cetera
 """
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
 import joblib
-import xgboost as xgb
 import submission
+
+from model.utils import get_device
+from model.submission_utils import PreFerPredictor, DataProcessor
+
 
 def train_save_model(cleaned_df, outcome_df):
     """
@@ -22,39 +28,60 @@ def train_save_model(cleaned_df, outcome_df):
     outcome_df (pd.DataFrame): The data with the outcome variable (e.g., from PreFer_train_outcome.csv or PreFer_fake_outcome.csv).
     """
 
-    ## This script contains a bare minimum working example
+    # This script contains a bare minimum working example
+    device = get_device()
+    # 1. Convert Data
+    data_processor = DataProcessor(data=cleaned_df,
+                                   outcomes=outcome_df,
+                                   codebook_path="",
+                                   importance_path="")
+    data_processor.convert_to_sequences(use_codebook=True)
+    data_processor.make_dataloader(batch_size=16)
 
-    # Combine cleaned_df and outcome_df
-    model_df = pd.merge(cleaned_df, outcome_df, on="nomem_encr")
+    # 2. Setup model training
+    model = PreFerPredictor().to(device)
+    # Define the loss function
+    NUM_EPOCHS = 12
 
-    # Filter cases for whom the outcome is not available
-    model_df = model_df[~model_df['new_child'].isna()]
+    loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([5.]).to(device))
+    optimizer = torch.optim.RAdam(
+        model.parameters(), lr=1e-2, weight_decay=1e-2, decoupled_weight_decay=True)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=NUM_EPOCHS * len(data_processor.train_dataloader), eta_min=8e-4, last_epoch=-1)
+    # EMA Weight Averaging
+    avg_fn = optim.swa_utils.get_ema_avg_fn(0.99)
+    avg_model = optim.swa_utils.AveragedModel(
+        model, avg_fn=avg_fn, use_buffers=False)
+    avg_start = 3
 
-    # Logistic regression model
-    scale_pos_weight =  model_df['new_child'].value_counts()[0] / model_df['new_child'].value_counts()[1]
-    
-    model = xgb.XGBClassifier(
-            objective='binary:logistic', 
-            use_label_encoder=False, 
-            eval_metric='logloss',
-            scale_pos_weight=scale_pos_weight, 
-            max_delta_step=1,
-            verbosity=0,
-            tree_method='exact',
-            learning_rate=0.1,
-            subsample=0.8,
-            reg_lambda = 5, #10
-            reg_alpha = 0.1, #0.1
-            )
+    # 3. Training loop
+    model.train()
+    avg_model.train()
+    for epoch in range(NUM_EPOCHS):
+        for batch in data_processor.train_dataloader:
+            optimizer.zero_grad()
+            inputs, labels = batch
+            labels = labels.to(torch.float).to(device)
+            input_year, input_seq = inputs
+            # Model
+            output = model(input_year=input_year,
+                           input_seq=input_seq, labels=labels)
+            # Loss
+            loss = loss_fn(output, labels)
+            loss.backward()
+            optimizer.step()
+            scheduler.step()
 
-    # Fit the model # model_df['new_child'] is the target variable
-    model.fit(model_df.drop(['nomem_encr', 'new_child'], axis=1), model_df['new_child'])
-  
-    # print model fitting results
-    print(model)
-    
-    # Save the model
-    joblib.dump(model, "model.joblib")
+            # EMA averaging starts only after 3 epochs
+            if epoch > avg_start:
+                avg_model.update_parameters(model)
+
+    avg_model.eval()
+    # Save the averaged model
+    joblib.dump(avg_model, "model.joblib")
+    # Save the data processor 
+    joblib.dump(data_processor, "data_processor.joblib")
+
 
 if __name__ == "__main__":
     df = pd.read_csv("training_data/PreFer_train_data.csv")
