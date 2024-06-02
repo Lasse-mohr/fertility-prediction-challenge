@@ -20,7 +20,7 @@ from model.utils import get_device
 from model.submission_utils import PreFerPredictor, DataProcessor
 
 
-def train_save_model(cleaned_df, outcome_df, codebook_path: str, importance_path: str):
+def train_save_model(cleaned_df: pd.DataFrame, outcome_df: pd.DataFrame, codebook_df: pd.DataFrame, importance_path: str):
     """
     Trains a model using the cleaned dataframe and saves the model to a file.
 
@@ -35,19 +35,20 @@ def train_save_model(cleaned_df, outcome_df, codebook_path: str, importance_path
     # This script contains a bare minimum working example
     device = get_device()
     # 1. Convert Data
-    data_processor = DataProcessor(data=cleaned_df,
-                                   outcomes=outcome_df,
-                                   codebook_path=codebook_path,
+    col_importance = pd.read_csv(importance_path)
+    data_processor = DataProcessor(cleaned_df=cleaned_df,
+                                   codebook=codebook_df,
+                                   col_importance=col_importance,
                                    n_cols=150,
-                                   importance_path=importance_path)
-    data_processor.convert_to_sequences(use_codebook=True)
-    data_processor.make_traindata(batch_size=16)
+                                   )
+    data_processor.df_to_sequences(use_codebook=True)
+    data_processor.prepare_traindata(batch_size=16, outcomes=outcome_df)
     print("(TRAINING) Data Ready")
 
     # 2. Setup model training
     model = PreFerPredictor().to(device)
     # Define the loss function
-    NUM_EPOCHS = 13
+    NUM_EPOCHS = 12
 
     loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([5.]).to(device))
     optimizer = torch.optim.RAdam(
@@ -93,10 +94,6 @@ def train_save_model(cleaned_df, outcome_df, codebook_path: str, importance_path
     joblib.dump(avg_model.get_submodule("module"), "model.joblib")
     print("(TRAINING) Model training is saved!")
 
-    # Save the data processor
-    joblib.dump(data_processor, "data_processor.joblib")
-    print("(TRAINING) Data processor is saved!")
-
 
 if __name__ == "__main__":
     # df = pd.read_csv("training_data/PreFer_train_data.csv")
@@ -104,10 +101,10 @@ if __name__ == "__main__":
     df = pd.read_csv(
         "training_data/PreFer_train_data.csv", low_memory=False)
     outcome_df = pd.read_csv("training_data/PreFer_train_outcome.csv")
+    codebook_df = pd.read_csv("codebooks/PreFer_codebook.csv")
     ##########################################
-    ## GS Temporary fix
-    cleaned_df = df# submission.clean_df(df)
+    # GS Temporary fix
+    cleaned_df = submission.clean_df(df=df, codebook=codebook_df)
     ###########################################
-    codebook_path = "codebooks/PreFer_codebook.csv"
     importance_path = "features_importance_all.csv"
-    train_save_model(cleaned_df, outcome_df, codebook_path, importance_path)
+    train_save_model(cleaned_df, outcome_df, codebook_df, importance_path)

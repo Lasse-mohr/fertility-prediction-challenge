@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 
 from model.rnn import GRUDecoder
 from model.encoders import CustomExcelFormer
-from data_processing.pipeline import encoding_pipeline, get_generic_name
+from data_processing.pipeline import get_generic_name, to_sequences
 
 
 import matplotlib.pyplot as plt
@@ -88,80 +88,37 @@ class PreFerPredictor(nn.Module):
 
 class DataProcessor:
     def __init__(self,
-                 data: pd.DataFrame,
-                 outcomes: pd.DataFrame,
-                 n_cols: int,
-                 codebook_path: str = 'codebooks/PreFer_codebook.csv',
-                 importance_path: str = 'features_importance_all.csv') -> None:
-        self.data = data
-        self.outcomes = outcomes
-        self.codebook = pd.read_csv(codebook_path)
-        self.col_importance = pd.read_csv(importance_path)
+                 cleaned_df: pd.DataFrame,
+                 codebook: pd.DataFrame,
+                 col_importance: pd.DataFrame,
+                 n_cols: int = 150,
+                 ) -> None:
+        self.data = cleaned_df
+        self.codebook = codebook
+        self.col_importance = col_importance
         self.n_cols = n_cols
 
-    def convert_to_sequences(self, use_codebook: bool = True):
+    def make_custom_pairs(self):
+        self.questions_to_use = self.custom_pairs = self.col_importance.feature.map(
+            lambda x: get_generic_name(x)).unique()[:self.n_cols]
+
+    def df_to_sequences(self, use_codebook: bool = True):
         """
         Converts the training dataframe into sequences (format that can be used by the CustomExcelFormer)
         """
-        self.custom_pairs = self.col_importance.feature.map(
-            lambda x: get_generic_name(x)).unique()[:self.n_cols]
+        self.make_custom_pairs()
+        self.sequences = to_sequences(df=self.data,
+                                      codebook=self.codebook,
+                                      use_codebook=use_codebook,
+                                      custom_pairs=self.questions_to_use,
+                                      importance=self.col_importance)
 
-        print("Custom pairs: done!")
-
-        self.sequences = encoding_pipeline(self.data,
-                                           codebook=self.codebook,
-                                           custom_pairs=self.custom_pairs,
-                                           importance=self.col_importance,
-                                           use_codebook=use_codebook)
-
-        print("Sequencing is done!")
-
-        self.__preprocessing_pipeline__()
-
-    def make_predictions(self, df: pd.DataFrame, batch_size: int, use_codebook: bool = True):
-        """
-        Method takes the dataframe (with unseen data) without any target values,
-        and assembles a 'prediction_dataloader'.
-        """
-        self.prediction_sequences = encoding_pipeline(df, self.codebook,
-                                                      custom_pairs=self.custom_pairs,
-                                                      importance=self.col_importance,
-                                                      use_codebook=use_codebook)
-
-        person_ids = df['nomem_encr'].values
-        data_obj = {person_id: (
-            torch.tensor(
-                [year-2007 for year, _ in wave_responses.items()]).to(device),
-            torch.tensor(
-                [wave_response for _, wave_response in wave_responses.items()]).to(device)
-        )
-            for person_id, wave_responses in self.prediction_sequences.items()
-        }
-
-        # split data based on the splits made for the target
-        full_data = {person_id: data_obj[person_id]
-                     for person_id in person_ids}
-
-        self.prediction_dataset = PredictionDataset(full_data)
-        self.prediction_dataloader = DataLoader(
-            self.prediction_dataset,
-            batch_size=batch_size,
-            shuffle=False)
-
-    def __preprocessing_pipeline__(self):
-        """
-        Processes the training data to estimate the vocabulary size.
-        """
-        self.pretrain_dataset = PretrainingDataset(self.sequences)
-        self.seq_len = self.pretrain_dataset.get_seq_len()
-        self.vocab_size = self.pretrain_dataset.get_vocab_size()
-
-    def make_traindata(self, batch_size: int):
+    def prepare_traindata(self, outcomes: pd.DataFrame,  batch_size: int = 16):
         """Create dataloader for the whole finetuning dataset.
         At the end creates training dataset and training dataloader
         """
         # Do we still need this filtering?
-        outcomes = self.outcomes[self.outcomes.new_child.notna()]
+        outcomes = outcomes[outcomes.new_child.notna()]
         person_ids = outcomes['nomem_encr'].values
         data_obj = {person_id: (
             torch.tensor(
@@ -176,8 +133,41 @@ class DataProcessor:
         full_data = {person_id: data_obj[person_id]
                      for person_id in person_ids}
 
-        self.full_dataset = FinetuningDataset(full_data, targets=outcomes)
+        full_dataset = FinetuningDataset(full_data, targets=outcomes)
         self.full_dataloader = DataLoader(
-            self.full_dataset,
+            full_dataset,
             batch_size=batch_size,
             shuffle=True)
+
+    def prepare_predictdata(self, df: pd.DataFrame, batch_size: int = 16, use_codebook: bool = True):
+        """
+        Method takes the dataframe (with unseen data) without any target values,
+        and assembles a 'prediction_dataloader'.
+        """
+        self.make_custom_pairs()
+
+        _sequences = to_sequences(df=df,
+                                  codebook=self.codebook,
+                                  use_codebook=use_codebook,
+                                  custom_pairs=self.questions_to_use,
+                                  importance=self.col_importance)
+
+        person_ids = df['nomem_encr'].values
+        data_obj = {person_id: (
+            torch.tensor(
+                [year-2007 for year, _ in wave_responses.items()]).to(device),
+            torch.tensor(
+                [wave_response for _, wave_response in wave_responses.items()]).to(device)
+        )
+            for person_id, wave_responses in _sequences.items()
+        }
+
+        # split data based on the splits made for the target
+        data = {person_id: data_obj[person_id]
+                for person_id in person_ids}
+
+        prediction_dataset = PredictionDataset(data)
+        self.prediction_dataloader = DataLoader(
+            prediction_dataset,
+            batch_size=batch_size,
+            shuffle=False)
