@@ -21,36 +21,17 @@ import numpy as np
 import joblib
 from model.utils import get_device
 from model.submission_utils import DataProcessor, PreFerPredictor
-from data_processing.pipeline import encoding_pipeline, get_generic_name
+from data_processing.pipeline import get_generic_name
 from data_processing.encoding.categorical import CategoricalTransformer
 from data_processing.encoding.numeric_and_date import ToQuantileTransformer
-
-
-# Sorted IDs of Questions (based on the xboost impargtance measure)
-QUESTIONS_TO_USE = ['cf130' 'cf393' 'cf394' 'ca072' 'cfm' 'cf029' 'cf031' 'cr172' 'cf396'
-                    'belbezig' 'cs103' 'cp199' 'cf388' 'cf390' 'cp018' 'cs527' 'cs523'
-                    'cp025' 'cf025' 'cv153' 'cs387' 'cw600' 'cs176' 'cr116' 'cv308' 'cs571'
-                    'cf128' 'cf456' 'cf012' 'cp059' 'cs474' 'cf457' 'cr093' 'cs524'
-                    'birthyear' 'cp105' 'cf251' 'ch148' 'cs277' 'cf166' 'ca066' 'cw377'
-                    'cf028' 'cr178' 'ca075' 'cr133' 'cf249' 'cr142' 'cw052' 'cf026'
-                    'nettoink' 'cd028' 'ci002' 'cw428' 'cw412' 'cf397' 'cd014' 'cs415'
-                    'cv117' 'cp052' 'cd034' 'cv165' 'cs268' 'cs557' 'cr134' 'cr042' 'cp042'
-                    'cw045' 'brutoink' 'cp036' 'cw003' 'ch249' 'cp160' 'cs001' 'cv114'
-                    'burgstat' 'ci005' 'cv024' 'cp019' 'cv258' 'cp111' 'cs337' 'cp149'
-                    'cs199' 'cs288' 'ca001' 'cv148' 'cr081' 'cw611' 'cv303' 'cs495' 'cw576'
-                    'cs253' 'netinc' 'cd033' 'cp039' 'cr038' 'cs252' 'ch206' 'cv160' 'cp037'
-                    'cd010' 'cp076' 'cs102' 'cv279' 'cf163' 'ci020' 'cv129' 'cv101' 'ch219'
-                    'cs581' 'cp072' 'ci326' 'cr117' 'cw504' 'cv015' 'cs227' 'cf004' 'oplcat'
-                    'ch130' 'cs425' 'oplzon' 'cv230' 'cr083' 'ci337' 'cs231' 'ch107' 'cv247'
-                    'cs485' 'cp103' 'cs386' 'cv115' 'cv041' 'cp047' 'cw517' 'brutohh' 'cp027'
-                    'cp016' 'cf143' 'cf002' 'ch256' 'cv123' 'ci006' 'cd079' 'ch165' 'cp165'
-                    'cw002' 'ch002' 'cv289' 'cr179']
-
+import warnings
 
 # Function to clean the dataframe
+
+
 def clean_df(df: pd.DataFrame,
              background_df: pd.DataFrame = None,
-             col_importances: pd.DataFrame = None,
+             col_importance: pd.DataFrame = None,
              codebook: pd.DataFrame = None):
     """
     arguments:
@@ -69,9 +50,15 @@ def clean_df(df: pd.DataFrame,
         # Select only questions with yearly component
         codebook = codebook[codebook.year.notna()]
         # Get all question pairs
-        if QUESTIONS_TO_USE is not None:
-            codebook["pairs"] = codebook['var_name'].apply(get_generic_name)
-            codebook = codebook[codebook["pairs"].isin(QUESTIONS_TO_USE)]
+        if col_importance is not None:
+            # Sorted IDs of Questions (based on the xboost impargtance measure)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                custom_pairs = col_importance.feature.map(
+                    lambda x: get_generic_name(x)).unique()[:200]  # We keep 200 columns (but our DataProcessor will downsample to 150 later in the pipeline)
+                codebook["pairs"] = codebook['var_name'].apply(
+                    get_generic_name)
+                codebook = codebook[codebook["pairs"].isin(custom_pairs)]
 
         # Get relevant columns
         categorical_columns = codebook[codebook.type_var ==
@@ -108,7 +95,7 @@ def clean_df(df: pd.DataFrame,
     return cleaned_data
 
 
-def predict_outcomes(df, background_df=None,  model_path="model.joblib",
+def predict_outcomes(df: pd.DataFrame, background_df: pd.DataFrame = None,  model_path: str = "model.joblib",
                      codebook_path: str = "codebooks/PreFer_codebook.csv",
                      importance_path: str = "features_importance_all.csv"):
     """Generate predictions using the saved model and the input dataframe.
@@ -145,7 +132,8 @@ def predict_outcomes(df, background_df=None,  model_path="model.joblib",
     # GS Temporary Fix
     codebook = pd.read_csv(codebook_path)
     col_importance = pd.read_csv(importance_path)
-    cleaned_df = clean_df(df=df, codebook=codebook)
+    cleaned_df = clean_df(df=df, codebook=codebook,
+                          col_importance=col_importance)
     #################################
 
     data_processor = DataProcessor(
@@ -153,6 +141,7 @@ def predict_outcomes(df, background_df=None,  model_path="model.joblib",
         codebook=codebook,
         col_importance=col_importance,
         n_cols=150)
+
     data_processor.prepare_predictdata(
         df=cleaned_df, batch_size=16, use_codebook=True)
     print("(SUBMISSION) Data Processor is done!")

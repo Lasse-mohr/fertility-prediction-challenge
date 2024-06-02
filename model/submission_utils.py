@@ -1,12 +1,8 @@
 # Data packages
 import pandas as pd
-import matplotlib.pyplot as plt
-from tqdm import tqdm
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
 
 from torch.utils.data import DataLoader
 
@@ -17,9 +13,8 @@ from data_processing.pipeline import get_generic_name, to_sequences
 
 import matplotlib.pyplot as plt
 from model.utils import get_device
-from model.dataset import PretrainingDataset
 from model.dataset import FinetuningDataset, PredictionDataset
-
+import warnings
 
 device = get_device()
 
@@ -99,8 +94,13 @@ class DataProcessor:
         self.n_cols = n_cols
 
     def make_custom_pairs(self):
-        self.questions_to_use = self.custom_pairs = self.col_importance.feature.map(
-            lambda x: get_generic_name(x)).unique()[:self.n_cols]
+        """
+        Make a list of ordered ColumnIDs. Order is based on the 
+        """
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.questions_to_use = self.col_importance.feature.map(
+                lambda x: get_generic_name(x)).unique()[:self.n_cols]
 
     def df_to_sequences(self, use_codebook: bool = True):
         """

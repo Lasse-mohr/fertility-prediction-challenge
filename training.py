@@ -20,7 +20,7 @@ from model.utils import get_device
 from model.submission_utils import PreFerPredictor, DataProcessor
 
 
-def train_save_model(cleaned_df: pd.DataFrame, outcome_df: pd.DataFrame, codebook_df: pd.DataFrame, importance_path: str):
+def train_save_model(cleaned_df: pd.DataFrame, outcome_df: pd.DataFrame, codebook_df: pd.DataFrame, importance_df: pd.DataFrame):
     """
     Trains a model using the cleaned dataframe and saves the model to a file.
 
@@ -35,10 +35,9 @@ def train_save_model(cleaned_df: pd.DataFrame, outcome_df: pd.DataFrame, codeboo
     # This script contains a bare minimum working example
     device = get_device()
     # 1. Convert Data
-    col_importance = pd.read_csv(importance_path)
     data_processor = DataProcessor(cleaned_df=cleaned_df,
                                    codebook=codebook_df,
-                                   col_importance=col_importance,
+                                   col_importance=importance_df,
                                    n_cols=150,
                                    )
     data_processor.df_to_sequences(use_codebook=True)
@@ -48,7 +47,7 @@ def train_save_model(cleaned_df: pd.DataFrame, outcome_df: pd.DataFrame, codeboo
     # 2. Setup model training
     model = PreFerPredictor().to(device)
     # Define the loss function
-    NUM_EPOCHS = 12
+    NUM_EPOCHS = 13
 
     loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([5.]).to(device))
     optimizer = torch.optim.RAdam(
@@ -102,9 +101,12 @@ if __name__ == "__main__":
         "training_data/PreFer_train_data.csv", low_memory=False)
     outcome_df = pd.read_csv("training_data/PreFer_train_outcome.csv")
     codebook_df = pd.read_csv("codebooks/PreFer_codebook.csv")
+    importance_path = "features_importance_all.csv"
+
+    importance_df = pd.read_csv(importance_path)
     ##########################################
     # GS Temporary fix
-    cleaned_df = submission.clean_df(df=df, codebook=codebook_df)
+    cleaned_df = submission.clean_df(
+        df=df, codebook=codebook_df, col_importance=importance_df)
     ###########################################
-    importance_path = "features_importance_all.csv"
-    train_save_model(cleaned_df, outcome_df, codebook_df, importance_path)
+    train_save_model(cleaned_df, outcome_df, codebook_df, importance_df)
