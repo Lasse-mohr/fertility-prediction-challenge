@@ -37,6 +37,7 @@ def train_save_model(cleaned_df, outcome_df):
                                    importance_path="")
     data_processor.convert_to_sequences(use_codebook=True)
     data_processor.make_dataloader(batch_size=16)
+    print("(TRAINING) Data Ready")
 
     # 2. Setup model training
     model = PreFerPredictor().to(device)
@@ -53,6 +54,8 @@ def train_save_model(cleaned_df, outcome_df):
     avg_model = optim.swa_utils.AveragedModel(
         model, avg_fn=avg_fn, use_buffers=False)
     avg_start = 3
+
+    print("(TRAINING) Model is initialized")
 
     # 3. Training loop
     model.train()
@@ -76,11 +79,16 @@ def train_save_model(cleaned_df, outcome_df):
             if epoch > avg_start:
                 avg_model.update_parameters(model)
 
+    print("(TRAINING) Model training is finished!")
+
     avg_model.eval()
     # Save the averaged model
     joblib.dump(avg_model, "model.joblib")
-    # Save the data processor 
+    print("(TRAINING) Model training is saved!")
+
+    # Save the data processor
     joblib.dump(data_processor, "data_processor.joblib")
+    print("(TRAINING) Data processor is saved!")
 
 
 if __name__ == "__main__":
