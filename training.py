@@ -29,8 +29,8 @@ def train_save_model(cleaned_df: pd.DataFrame, outcome_df: pd.DataFrame, codeboo
     outcome_df (pd.DataFrame): The data with the outcome variable (e.g., from PreFer_train_outcome.csv or PreFer_fake_outcome.csv).
     """
     torch.manual_seed(42)
-    np.random.seed(42)
-    random.seed(42)
+    np.random.seed(43)
+    random.seed(44)
 
     # This script contains a bare minimum working example
     device = get_device()
@@ -47,13 +47,13 @@ def train_save_model(cleaned_df: pd.DataFrame, outcome_df: pd.DataFrame, codeboo
     # 2. Setup model training
     model = PreFerPredictor().to(device)
     # Define the loss function
-    NUM_EPOCHS = 13
+    NUM_EPOCHS = 14
 
     loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.Tensor([5.]).to(device))
     optimizer = torch.optim.RAdam(
         model.parameters(), lr=1e-2, weight_decay=1e-2, decoupled_weight_decay=True)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=NUM_EPOCHS * len(data_processor.full_dataloader), eta_min=8e-4, last_epoch=-1)
+        optimizer, T_max=NUM_EPOCHS * len(data_processor.full_dataloader), eta_min=7e-4, last_epoch=-1)
     # EMA Weight Averaging
     avg_fn = optim.swa_utils.get_ema_avg_fn(0.99)
     avg_model = optim.swa_utils.AveragedModel(
