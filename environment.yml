@@ -15,4 +15,3 @@ dependencies:
     - torch
     - pytorch_frame
     - tqdm
-    - torch_frame

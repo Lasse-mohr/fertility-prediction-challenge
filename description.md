@@ -7,7 +7,7 @@ We proceed in three steps:
 2. **Our best performing model is the ExcelFormer [4] + RNN:**
     - (*ExcelFormer*) To create deep representation of the (answered) questionnaires
     - (*Recurrent Neural Network*) To leverage temporal interactions between the questionnaires
-3. **Our main work has been on an AutoEncoder model:**
+3. **Our work initially focused on the AutoEncoder model:**
     - To capture complex, non-linear relationships in the data.
     - To explore new factors and interactions that traditional gradient boosting models might miss.
 
