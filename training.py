@@ -104,7 +104,10 @@ if __name__ == "__main__":
     df = pd.read_csv(
         "training_data/PreFer_train_data.csv", low_memory=False)
     outcome_df = pd.read_csv("training_data/PreFer_train_outcome.csv")
-    cleaned_df = submission.clean_df(df)
+    ##########################################
+    ## GS Temporary fix
+    cleaned_df = df# submission.clean_df(df)
+    ###########################################
     codebook_path = "codebooks/PreFer_codebook.csv"
     importance_path = "features_importance_all.csv"
     train_save_model(cleaned_df, outcome_df, codebook_path, importance_path)

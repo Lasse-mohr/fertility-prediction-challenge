@@ -362,7 +362,10 @@ def predict_outcomes(df, background_df=None,  model_path="model.joblib", data_pr
     print("(SUBMISSION) Trained model is loaded!")
 
     # Preprocess the fake / holdout data
-    df = clean_df(df, background_df)
+    #################################
+    # GS Temporary Fix
+    #df = clean_df(df, background_df)
+    #################################
     data_processor = joblib.load(data_processor_path)
     data_processor.make_predictions(df = df, batch_size = 16, use_codebook = False)
     print("(SUBMISSION) Data Processor is done!")
@@ -370,6 +373,7 @@ def predict_outcomes(df, background_df=None,  model_path="model.joblib", data_pr
     # Generate predictions from model, should be 0 (no child) or 1 (had child)
     predictions = model.predict(data_processor.prediction_dataloader)
     predictions = (predictions > 0.5).astype(int)
+    print("(SUBMISSION) Predictions are ready")
 
     # Output file should be DataFrame with two columns, nomem_encr and predictions
     df_predict = pd.DataFrame(
