@@ -18,10 +18,12 @@ def encoding_pipeline(data, codebook=None, use_codebook=True, custom_pairs=None,
 
     if not use_codebook:
         if isfile(categorical_column_filepath) or not isfile(quantile_column_filepath):
-            categorical_columns = pd.read_csv(categorical_column_filepath).squeeze()
+            categorical_columns = pd.read_csv(
+                categorical_column_filepath).squeeze()
             quantile_columns = pd.read_csv(quantile_column_filepath).squeeze()
         else:
-            print(f'Files with column names not found at: {categorical_column_filepath}')
+            print(
+                f'Files with column names not found at: {categorical_column_filepath}')
             print('Calculating columns with encoding_pipeline')
             use_codebook = True
 
@@ -59,7 +61,8 @@ def encoding_pipeline(data, codebook=None, use_codebook=True, custom_pairs=None,
     data = quantile_transformer.transform(data)
 
     # Fill any nans
-    data = data.fillna(101)
+    data = data.fillna(
+        {col: 101 for col in data.columns[data.dtypes.eq(float)]})
     data = data.astype(int, errors='ignore')
     # Drop object columns (automatically filled with 101 in to_sequences)
     data = data[data.columns[data.dtypes != 'object']]
@@ -69,5 +72,3 @@ def encoding_pipeline(data, codebook=None, use_codebook=True, custom_pairs=None,
                              custom_pairs=custom_pairs, importance=importance)
 
     return sequences
-
-

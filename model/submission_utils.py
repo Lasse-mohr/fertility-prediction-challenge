@@ -10,9 +10,6 @@ import torch.optim as optim
 
 from torch.utils.data import DataLoader
 
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import precision_recall_fscore_support, average_precision_score, f1_score, recall_score, precision_score, matthews_corrcoef
-
 from model.rnn import GRUDecoder
 from model.encoders import CustomExcelFormer
 from data_processing.pipeline import encoding_pipeline, get_generic_name
@@ -105,18 +102,24 @@ class DataProcessor:
         self.custom_pairs = self.col_importance.feature.map(
             lambda x: get_generic_name(x)).unique()[:self.n_cols]
 
-        self.sequences = encoding_pipeline(self.data, self.codebook,
+        print("Custom pairs: done!")
+
+        self.sequences = encoding_pipeline(self.data,
+                                           codebook=self.codebook,
                                            custom_pairs=self.custom_pairs,
                                            importance=self.col_importance,
                                            use_codebook=use_codebook)
+
+        print("Sequencing is done!")
+
         self.__preprocessing_pipeline__()
 
     def make_predictions(self, df: pd.DataFrame, batch_size: int, use_codebook: bool = True):
         self.prediction_sequences = encoding_pipeline(self.data, self.codebook,
-                                           custom_pairs=self.custom_pairs,
-                                           importance=self.col_importance,
-                                           use_codebook=use_codebook)
-        
+                                                      custom_pairs=self.custom_pairs,
+                                                      importance=self.col_importance,
+                                                      use_codebook=use_codebook)
+
         person_ids = df['nomem_encr'].values
         data_obj = {person_id: (
             torch.tensor(
@@ -136,8 +139,6 @@ class DataProcessor:
             self.full_dataset,
             batch_size=batch_size,
             shuffle=False)
-
-        
 
     def __preprocessing_pipeline__(self):
         self.pretrain_dataset = PretrainingDataset(self.sequences)
@@ -169,4 +170,3 @@ class DataProcessor:
             self.full_dataset,
             batch_size=batch_size,
             shuffle=True)
-
