@@ -1,11 +1,8 @@
 # Data packages
-import pandas as pd
 import polars as pl     # requires installing polars first
-import pyarrow          # requires installing pyarrow first
 import re
 
 import torch_frame as tf
-import numpy as np
 from collections import defaultdict
 
 

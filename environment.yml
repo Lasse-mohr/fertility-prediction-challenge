@@ -10,8 +10,5 @@ dependencies:
     - numpy==1.26.0
     - pandas
     - scikit-learn
-    - polars
-    - pyarrow
     - torch
     - pytorch_frame
-    - tqdm
