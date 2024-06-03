@@ -11,5 +11,5 @@ dependencies:
     - pandas
     - scikit-learn
     - torch
-    - pytorch_frame
+    - pytorch_frame==0.2.2
 

@@ -9,6 +9,8 @@ WORKDIR /app
 COPY *.csv /app
 COPY *.py /app
 COPY *.joblib /app
+COPY model model/
+COPY data_processing data_processing/
 
 ENTRYPOINT ["conda", "run", "-n", "eyra-rank", "python", "/app/run.py"]
 CMD ["predict", "/data/fake_data.csv"]
