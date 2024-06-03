@@ -10,6 +10,6 @@ dependencies:
     - numpy==1.26.0
     - pandas
     - scikit-learn
-    - torch
+    - torch==2.3.0
     - pytorch_frame==0.2.2
 
