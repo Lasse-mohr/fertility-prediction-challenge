@@ -60,7 +60,7 @@ def predict(data_path, background_data_path, output):
         low_memory=False,
     )
 
-    predictions = submission.predict_outcomes(data_df, background_data_df)
+    predictions = submission.predict_outcomes(data_df, background_data_df, model_path="model_cpu.joblib")
     assert (
         predictions.shape[1] == 2
     ), "Predictions must have two columns: nomem_encr and prediction"
