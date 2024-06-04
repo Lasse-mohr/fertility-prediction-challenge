@@ -11,7 +11,6 @@ from model.encoders import CustomExcelFormer
 from data_processing.pipeline import get_generic_name, to_sequences
 
 
-import matplotlib.pyplot as plt
 from model.utils import get_device
 from model.dataset import FinetuningDataset, PredictionDataset
 import warnings
