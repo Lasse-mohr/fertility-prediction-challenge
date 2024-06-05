@@ -30,7 +30,6 @@ import warnings
 
 
 def clean_df(df: pd.DataFrame,
-             background_df: pd.DataFrame = None,
              col_importance: pd.DataFrame = None,
              codebook: pd.DataFrame = None):
     """
@@ -42,33 +41,12 @@ def clean_df(df: pd.DataFrame,
 
     data = df.copy()
 
-    # Process According to Type
-    if codebook is None:
-        raise NotImplementedError("Provide path to codebook")
-    else:
-        use_codebook = True
-        # Select only questions with yearly component
-        codebook = codebook[codebook.year.notna()]
-        # Get all question pairs
-        if col_importance is not None:
-            # Sorted IDs of Questions (based on the xboost impargtance measure)
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                custom_pairs = col_importance.feature.map(
-                    lambda x: get_generic_name(x)).unique()[:200]  # We keep 200 columns (but our DataProcessor will downsample to 150 later in the pipeline)
-                codebook["pairs"] = codebook['var_name'].apply(
-                    get_generic_name)
-                codebook = codebook[codebook["pairs"].isin(custom_pairs)]
-
-        # Get relevant columns
-        categorical_columns = codebook[codebook.type_var ==
-                                       'categorical'].var_name
-        quantile_columns = codebook[((codebook.type_var == 'numeric') | (
-            codebook.type_var == 'date or time'))].var_name
-
     # Encode categorical columns
     categorical_transformer = CategoricalTransformer()
-    categorical_transformer.fit(codebook, use_codebook=use_codebook)
+    categorical_transformer.fit(codebook, use_codebook=codebook is not None)
+
+    categorical_columns = pd.read_csv('data_processing/codebook_false/encoding_pipeline/categorical_columns.csv').var_name.tolist()
+    quantile_columns = pd.read_csv('data_processing/codebook_false/encoding_pipeline/quantile_columns.csv').var_name.tolist()
 
     data[categorical_columns] = categorical_transformer.transform(
         data[categorical_columns])
@@ -130,7 +108,7 @@ def predict_outcomes(df: pd.DataFrame, background_df: pd.DataFrame = None,  mode
     # Preprocess the fake / holdout data
     #################################
     # GS Temporary Fix
-    codebook = pd.read_csv(codebook_path)
+    codebook = None#pd.read_csv(codebook_path)
     col_importance = pd.read_csv(importance_path)
     cleaned_df = clean_df(df=df, codebook=codebook,
                           col_importance=col_importance)
@@ -143,7 +121,7 @@ def predict_outcomes(df: pd.DataFrame, background_df: pd.DataFrame = None,  mode
         n_cols=150)
 
     data_processor.prepare_predictdata(
-        df=cleaned_df, batch_size=16, use_codebook=True)
+        df=cleaned_df, batch_size=16, use_codebook=codebook is not None)
     print("(SUBMISSION) Data Processor is done!")
 
     # Generate predictions from model, should be 0 (no child) or 1 (had child)
