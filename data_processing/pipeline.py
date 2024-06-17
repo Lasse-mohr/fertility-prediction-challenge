@@ -5,6 +5,9 @@ from data_processing.encoding.categorical import CategoricalTransformer
 from data_processing.encoding.numeric_and_date import ToQuantileTransformer
 from data_processing.sequences.sequencing import to_sequences, get_generic_name
 
+def min_max_normalize_series(series):
+    return (series - series.min()) / (series.max() - series.min())
+
 
 def encoding_pipeline(data, codebook=None, use_codebook=True, custom_pairs=None,
                       save_inter_path='data_processing/codebook_false/encoding_pipeline/',
@@ -56,10 +59,11 @@ def encoding_pipeline(data, codebook=None, use_codebook=True, custom_pairs=None,
         data[categorical_columns])
 
     # Encode numeric and date columns
-    quantile_transformer = ToQuantileTransformer(quantile_columns)
-    quantile_transformer.fit(data)
-    data = quantile_transformer.transform(data)
-    data[quantile_columns] *= 100
+    # quantile_transformer = ToQuantileTransformer(quantile_columns)
+    # quantile_transformer.fit(data)
+    # data = quantile_transformer.transform(data)
+    # data[quantile_columns] *= 100
+    data[quantile_columns] = data[quantile_columns].apply(min_max_normalize_series)
 
     # Fill any nans
     #########################
@@ -68,7 +72,7 @@ def encoding_pipeline(data, codebook=None, use_codebook=True, custom_pairs=None,
     data = data.fillna(
         {col: 101 for col in data.columns[data.dtypes.eq(float)]})
     #########################
-    data = data.astype(int, errors='ignore')
+    # data = data.astype(int, errors='ignore')
     # Drop object columns (automatically filled with 101 in to_sequences)
     data = data[data.columns[data.dtypes != 'object']]
 

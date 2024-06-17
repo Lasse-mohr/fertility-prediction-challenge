@@ -12,6 +12,8 @@ class SurveyEmbeddings(nn.Module):
         # Vocab size is number of unique answers
         self.answer_embedding = nn.Embedding(
             vocab_size, embedding_dim, padding_idx=101)
+        self.answer_embedding_cont = nn.Linear(1, embedding_dim)
+        self.norm = nn.LayerNorm(embedding_dim)
         self.yearly_embedding = nn.Embedding(
             n_years, embedding_dim)  # 14 years of data
         self.question_embedding = nn.Embedding(
@@ -32,6 +34,7 @@ class SurveyEmbeddings(nn.Module):
             self.drop_question = None  # nn.Dropout1d(dropout)
 
         self.return_status()
+        self.embedding_dim = embedding_dim
 
     def reset_parameters(self):
         # , a=-0.5, b=0.5)
@@ -46,7 +49,16 @@ class SurveyEmbeddings(nn.Module):
 
     def forward(self, year, answer):
         # ANSWER EMBEDDING
-        answer = self.answer_embedding(answer)
+        placeholder = torch.zeros(*answer.shape, self.embedding_dim)
+        is_continious = answer <= 1
+        embed_continious = self.answer_embedding_cont(answer[is_continious].unsqueeze(1))
+        embed_cat = self.answer_embedding(answer[~is_continious].unsqueeze(1))
+
+        placeholder[is_continious] = embed_continious.squeeze(1)
+        placeholder[~is_continious] = embed_cat.squeeze(1)
+        answer = self.norm(placeholder)
+
+        # answer = self.answer_embedding(answer)
         if self.drop_answer is not None:
             answer = self.drop_answer(answer)
         # YEAR EMBEDDING
