@@ -59,6 +59,7 @@ def encoding_pipeline(data, codebook=None, use_codebook=True, custom_pairs=None,
     quantile_transformer = ToQuantileTransformer(quantile_columns)
     quantile_transformer.fit(data)
     data = quantile_transformer.transform(data)
+    data[quantile_columns] *= 100
 
     # Fill any nans
     #########################

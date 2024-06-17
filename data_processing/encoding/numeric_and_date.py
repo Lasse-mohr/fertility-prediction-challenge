@@ -322,7 +322,7 @@ class ToQuantileTransformer(BaseEstimator, TransformerMixin):
                                             side='left') / (self.n_bins)
 
                     X_transformed[col] = np.nan
-                    X_transformed.loc[not_na_mask, col] = quantile_values*100
+                    X_transformed.loc[not_na_mask, col] = quantile_values
 
                 else:
                     X_transformed[col] = pd.Series(
